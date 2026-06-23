@@ -1,0 +1,106 @@
+/* ── reset ── */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* ── 灰色渐变基底 ── */
+body {
+    background: linear-gradient(145deg,
+        #d6d6de 0%,
+        #c2c2cc 20%,
+        #adaab8 40%,
+        #9a96a6 55%,
+        #8a8698 70%,
+        #7e7a8e 85%,
+        #726e84 100%
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+/* ── 重复线性渐变 → 浅灰色网格线 ── */
+.grid-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image:
+        repeating-linear-gradient(
+            to right,
+            rgba(200, 200, 210, 0.18) 0px,
+            rgba(200, 200, 210, 0.18) 1px,
+            transparent 1px,
+            transparent 48px
+        ),
+        repeating-linear-gradient(
+            to bottom,
+            rgba(200, 200, 210, 0.18) 0px,
+            rgba(200, 200, 210, 0.18) 1px,
+            transparent 1px,
+            transparent 48px
+        );
+    pointer-events: none;
+}
+
+/* ── 渐变色块组合容器（全屏范围） ── */
+.blob-composite {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    isolation: isolate;
+    overflow: hidden;
+}
+
+/* ── 单个渐变模糊色块 ── */
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    will-change: transform, filter;
+}
+
+/* ── 毛玻璃前景面板 ── */
+.glass-panel {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.90);
+    padding: 2.5rem 3.5rem;
+    border-radius: 28px;
+    user-select: none;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        0 8px 48px rgba(0, 0, 0, 0.20),
+        inset 0 1px 1px rgba(255, 255, 255, 0.10);
+}
+
+.glass-panel h1 {
+    font-size: clamp(1.6rem, 4vw, 3rem);
+    font-weight: 300;
+    letter-spacing: 6px;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #f5f5fa, #bcc4d8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.glass-panel p {
+    font-size: clamp(0.8rem, 1.4vw, 1.05rem);
+    font-weight: 200;
+    letter-spacing: 6px;
+    opacity: 0.55;
+}
