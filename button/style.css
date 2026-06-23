@@ -1,0 +1,182 @@
+/* ===== 全局重置 ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #0c0c1e;
+  font-family: 'Segoe UI', 'PingFang SC', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+/* ===== 容器 ===== */
+.container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ===== 玻璃质感按钮 ===== */
+.glass-btn {
+  position: relative;
+  padding: 18px 56px;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.95);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0.08) 40%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  border-radius: 16px;
+  cursor: pointer;
+  outline: none;
+  overflow: hidden;
+
+  /* 交互与性能优化 */
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  will-change: transform;
+
+  /* 阴影图层 */
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+
+  /* 背景模糊实现玻璃效果 */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== 顶部高光线 ===== */
+.glass-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.25) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  pointer-events: none;
+  border-radius: 16px 16px 0 0;
+}
+
+/* ===== 渐变流光动画层 ===== */
+.glass-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(100, 200, 255, 0.15) 25%,
+    rgba(180, 100, 255, 0.15) 50%,
+    rgba(255, 120, 200, 0.15) 75%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+/* ===== 文字相对定位 ===== */
+.btn-text {
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== 悬浮效果 ===== */
+.glass-btn:hover {
+  transform: translateY(-3px) scale(1.02);
+  border-color: rgba(255, 255, 255, 0.50);
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.45),
+    0 4px 12px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.10);
+}
+
+.glass-btn:hover::after {
+  opacity: 1;
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+
+/* ===== 按下效果 ===== */
+.glass-btn:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.30),
+    inset 0 2px 4px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  /* 不修改 background —— CSS 不支持渐变过渡，避免生硬切换 */
+}
+
+/* ===== 焦点指示器（键盘导航无障碍） ===== */
+.glass-btn:focus-visible {
+  outline: 2px solid rgba(180, 140, 255, 0.8);
+  outline-offset: 4px;
+  box-shadow:
+    0 0 0 4px rgba(180, 140, 255, 0.25),
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+/* ===== 禁用状态 ===== */
+.glass-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+/* ===== 减少动效偏好 ===== */
+@media (prefers-reduced-motion: reduce) {
+  .glass-btn,
+  .glass-btn::before,
+  .glass-btn::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .glass-btn:hover {
+    transform: none !important;
+  }
+
+  .glass-btn:hover::after {
+    opacity: 0 !important;
+    animation: none !important;
+  }
+}
+
+/* ===== 流光动画 ===== */
+@keyframes shimmer {
+  0% {
+    background-position: 0% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
