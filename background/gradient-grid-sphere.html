@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>立体网格渐变模糊球</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; }
+
+        body {
+            background: linear-gradient(145deg,
+                #07070f 0%, #0f0f24 25%,
+                #18183a 50%, #11112e 75%,
+                #08081a 100%
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+
+        /* ── 背景网格 ── */
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0;
+            background-image:
+                repeating-linear-gradient(
+                    to right, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px,
+                    transparent 1px, transparent 60px
+                ),
+                repeating-linear-gradient(
+                    to bottom, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px,
+                    transparent 1px, transparent 60px
+                );
+            pointer-events: none;
+        }
+
+        /* ── 环境光晕 ── */
+        .ambient-glow {
+            position: fixed;
+            width: 90vmin; height: 90vmin;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(120,140,255,0.07) 0%, transparent 65%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── 画布 ── */
+        canvas { display: block; position: fixed; inset: 0; z-index: 1; }
+
+        /* ── 底部面板 ── */
+        .glass-panel {
+            position: fixed;
+            bottom: 32px; left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
+            text-align: center;
+            color: rgba(255,255,255,0.75);
+            padding: 0.9rem 2.2rem;
+            border-radius: 18px;
+            user-select: none;
+            background: rgba(255,255,255,0.035);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 4px 36px rgba(0,0,0,0.40);
+            pointer-events: none;
+        }
+        .glass-panel h2 {
+            font-size: clamp(0.85rem, 1.8vw, 1.4rem);
+            font-weight: 300;
+            letter-spacing: 5px;
+            background: linear-gradient(135deg, #b4c2ee, #7a8ac8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .glass-panel p {
+            font-size: clamp(0.6rem, 0.9vw, 0.8rem);
+            font-weight: 200;
+            letter-spacing: 4px;
+            opacity: 0.35;
+            margin-top: 2px;
+            color: #8899cc;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-grid"></div>
+    <div class="ambient-glow"></div>
+
+    <div class="glass-panel">
+        <h2>✦ 网格渐变球 · 36 色块 ✦</h2>
+        <p>three.js · 立体渐变 · 旋转光斑</p>
+    </div>
+
+    <!-- Three.js -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // ─── 参数 ───
+        const ROWS = 6;
+        const COLS = 6;           // 6×6 = 36 色块
+        const RADIUS = 1.7;
+        const PAD = 0.86;         // 间隙系数（< 1 产生网格缝隙）
+        const DEPTH = 0.06;       // 色块厚度
+        const ROT_X = 0.0015;
+        const ROT_Y = 0.0040;
+        const EDGE_OPACITY = 0.20;
+
+        // ─── 渲染器 ───
+        const canvas = document.createElement('canvas');
+        document.body.prepend(canvas);
+        const renderer = new THREE.WebGLRenderer({
+            canvas,
+            antialias: true,
+            alpha: true,
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+        // ─── 场景 & 相机 ───
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 20);
+        camera.position.set(0, 0.6, 4.6);
+        camera.lookAt(0, 0, 0);
+
+        // ─── 渐变色盘（暖→冷 过渡） ───
+        const PALETTE = [
+            { h: 0.55, s: 0.65, l: 0.60 },  // 紫蓝
+            { h: 0.50, s: 0.60, l: 0.55 },  // 蓝紫
+            { h: 0.60, s: 0.55, l: 0.50 },  // 紫
+            { h: 0.65, s: 0.60, l: 0.55 },  // 粉紫
+            { h: 0.72, s: 0.65, l: 0.60 },  // 粉红
+            { h: 0.80, s: 0.70, l: 0.55 },  // 红粉
+            { h: 0.08, s: 0.65, l: 0.55 },  // 橙红
+            { h: 0.12, s: 0.70, l: 0.60 },  // 橙
+            { h: 0.18, s: 0.65, l: 0.55 },  // 橙黄
+            { h: 0.25, s: 0.60, l: 0.50 },  // 黄绿
+            { h: 0.35, s: 0.55, l: 0.45 },  // 青绿
+            { h: 0.45, s: 0.60, l: 0.50 },  // 青蓝
+        ];
+
+        function hsl(hex) { return new THREE.Color().setHSL(hex.h, hex.s, hex.l); }
+        function hslLight(hex, offset) { return new THREE.Color().setHSL(hex.h, hex.s * 0.6, hex.l + offset); }
+
+        // ─── 生成径向渐变纹理 ───
+        function makeGradientTexture(c1, c2) {
+            const S = 64;
+            const c = document.createElement('canvas');
+            c.width = S; c.height = S;
+            const ctx = c.getContext('2d');
+            const grad = ctx.createRadialGradient(
+                S * 0.40, S * 0.30, S * 0.04,
+                S * 0.50, S * 0.50, S * 0.56
+            );
+            grad.addColorStop(0, c1);
+            grad.addColorStop(0.40, c2);
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, S, S);
+            const tex = new THREE.CanvasTexture(c);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            tex.needsUpdate = true;
+            return tex;
+        }
+
+        // ─── 构建球面网格色块 ───
+        const group = new THREE.Group();
+        const tiles = [];
+
+        for (let i = 0; i < ROWS; i++) {
+            for (let j = 0; j < COLS; j++) {
+                const u = (i + 0.5) / ROWS;
+                const v = (j + 0.5) / COLS;
+
+                const theta = u * Math.PI * 2;
+                const phi = v * Math.PI;
+
+                // 球面位置
+                const x = RADIUS * Math.sin(phi) * Math.cos(theta);
+                const y = RADIUS * Math.cos(phi);
+                const z = RADIUS * Math.sin(phi) * Math.sin(theta);
+
+                // 球面基向量
+                const n = new THREE.Vector3(x, y, z).normalize();            // 法线（朝外）
+                const tTheta = new THREE.Vector3(-Math.sin(theta), 0, Math.cos(theta)).normalize();
+                const tPhi = new THREE.Vector3().crossVectors(n, tTheta).normalize();
+
+                // 色块尺寸（弧长 × 填充系数）
+                const latR = Math.max(Math.sin(phi), 0.08);
+                const dTheta = (2 * Math.PI) / COLS;
+                const dPhi = Math.PI / ROWS;
+                const tw = RADIUS * latR * dTheta * PAD;
+                const th = RADIUS * dPhi * PAD;
+
+                // 颜色选择：沿球面渐变
+                const hueOffset = (i / ROWS) * 0.6 + (j / COLS) * 0.4;
+                const idx = Math.floor(hueOffset * PALETTE.length) % PALETTE.length;
+                const col = PALETTE[idx];
+                const colNext = PALETTE[(idx + 1) % PALETTE.length];
+
+                const hueMix = (hueOffset * PALETTE.length) % 1;
+                const c1 = new THREE.Color().setHSL(
+                    col.h + (colNext.h - col.h) * hueMix,
+                    col.s + (colNext.s - col.s) * hueMix,
+                    col.l + (colNext.l - col.l) * hueMix + 0.15
+                );
+                const c2 = new THREE.Color().setHSL(
+                    col.h + (colNext.h - col.h) * hueMix,
+                    col.s * 0.7,
+                    col.l + (colNext.l - col.l) * hueMix - 0.10
+                );
+
+                const tex = makeGradientTexture(
+                    '#' + c1.getHexString(),
+                    '#' + c2.getHexString()
+                );
+
+                // 方块 Mesh
+                const geo = new THREE.BoxGeometry(Math.max(tw, 0.02), Math.max(th, 0.02), DEPTH);
+                const mat = new THREE.MeshStandardMaterial({
+                    map: tex,
+                    transparent: true,
+                    roughness: 0.20,
+                    metalness: 0.30,
+                    side: THREE.DoubleSide,
+                    depthWrite: false,
+                });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(x, y, z);
+
+                // 朝向：局部 X → tTheta, Y → tPhi, Z → n
+                const m4 = new THREE.Matrix4();
+                m4.makeBasis(tTheta, tPhi, n);
+                mesh.quaternion.setFromRotationMatrix(m4);
+
+                mesh.userData = { i, j, phi, theta };
+                group.add(mesh);
+                tiles.push(mesh);
+
+                // ── 边框线（高亮网格） ──
+                const edgeGeo = new THREE.EdgesGeometry(geo);
+                const edgeMat = new THREE.LineBasicMaterial({
+                    color: 0x8899cc,
+                    transparent: true,
+                    opacity: EDGE_OPACITY + 0.08 * Math.sin(i * 1.2 + j * 0.9),
+                });
+                const edgeLine = new THREE.LineSegments(edgeGeo, edgeMat);
+                edgeLine.position.copy(mesh.position);
+                edgeLine.quaternion.copy(mesh.quaternion);
+                group.add(edgeLine);
+            }
+        }
+
+        // ─── 内层光晕球 ───
+        const glowGeo = new THREE.SphereGeometry(RADIUS * 0.88, 48, 48);
+        const glowMat = new THREE.MeshBasicMaterial({
+            color: 0x4a6aae,
+            transparent: true,
+            opacity: 0.08,
+        });
+        const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+        group.add(glowMesh);
+
+        // ─── 线框球骨架 ───
+        const wireGeo = new THREE.SphereGeometry(RADIUS * 1.002, 24, 24);
+        const wireMat = new THREE.MeshBasicMaterial({
+            color: 0x6688cc,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.035,
+        });
+        const wireMesh = new THREE.Mesh(wireGeo, wireMat);
+        group.add(wireMesh);
+
+        scene.add(group);
+
+        // ─── 灯光 ───
+        scene.add(new THREE.AmbientLight(0x334466, 0.5));
+
+        const main = new THREE.DirectionalLight(0xffeedd, 2.5);
+        main.position.set(4, 3, 5);
+        scene.add(main);
+
+        const fill = new THREE.DirectionalLight(0x6688ff, 1.2);
+        fill.position.set(-3, -1, -4);
+        scene.add(fill);
+
+        const back = new THREE.DirectionalLight(0x88aaff, 0.6);
+        back.position.set(-2, 2, -5);
+        scene.add(back);
+
+        // 动态点光源（移动光斑）
+        const spot1 = new THREE.PointLight(0x88ccff, 2.0, 6);
+        spot1.position.set(3, 2, 3);
+        scene.add(spot1);
+
+        const spot2 = new THREE.PointLight(0xff88bb, 1.2, 5);
+        spot2.position.set(-2.5, -1.5, 3);
+        scene.add(spot2);
+
+        // 点光源可视化小球
+        function makeLightMarker(color, size = 0.06) {
+            const g = new THREE.SphereGeometry(size, 12, 12);
+            const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35 });
+            return new THREE.Mesh(g, m);
+        }
+        const marker1 = makeLightMarker(0x88ccff);
+        scene.add(marker1);
+        const marker2 = makeLightMarker(0xff88bb);
+        scene.add(marker2);
+
+        // ─── 星星粒子 ───
+        const starCount = 120;
+        const sGeo = new THREE.BufferGeometry();
+        const sPos = new Float32Array(starCount * 3);
+        const sSizes = new Float32Array(starCount);
+        for (let i = 0; i < starCount; i++) {
+            const r = 3 + Math.random() * 8;
+            const t = Math.random() * Math.PI * 2;
+            const p = Math.acos(2 * Math.random() - 1);
+            sPos[i * 3] = r * Math.sin(p) * Math.cos(t);
+            sPos[i * 3 + 1] = r * Math.cos(p);
+            sPos[i * 3 + 2] = r * Math.sin(p) * Math.sin(t);
+            sSizes[i] = 0.01 + Math.random() * 0.03;
+        }
+        sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+        sGeo.setAttribute('size', new THREE.BufferAttribute(sSizes, 1));
+        const sMat = new THREE.PointsMaterial({
+            color: 0x8899cc,
+            size: 0.02,
+            transparent: true,
+            opacity: 0.3,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+        });
+        const stars = new THREE.Points(sGeo, sMat);
+        scene.add(stars);
+
+        // ─── 窗口自适应 ───
+        window.addEventListener('resize', () => {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        });
+
+        // ─── 鼠标交互 ───
+        let mx = 0, my = 0;
+        document.addEventListener('mousemove', (e) => {
+            mx = (e.clientX / window.innerWidth - 0.5) * 0.5;
+            my = (e.clientY / window.innerHeight - 0.5) * 0.35;
+        });
+
+        // ─── 动画循环 ───
+        let t = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            t += 0.01;
+
+            // 自转
+            group.rotation.x += ROT_X;
+            group.rotation.y += ROT_Y;
+
+            // 鼠标惯性偏移
+            group.rotation.x += (my - group.rotation.x * 0.3) * 0.006;
+            group.rotation.y += (mx - group.rotation.y * 0.3) * 0.006;
+
+            // 动态光斑运动
+            const r1 = 3.2, r2 = 2.8;
+            spot1.position.x = r1 * Math.cos(t * 0.35);
+            spot1.position.z = r1 * Math.sin(t * 0.35);
+            spot1.position.y = 1.4 * Math.sin(t * 0.28) + 0.6;
+            marker1.position.copy(spot1.position);
+
+            spot2.position.x = r2 * Math.cos(t * 0.28 + 2.4);
+            spot2.position.z = r2 * Math.sin(t * 0.28 + 2.4);
+            spot2.position.y = 1.0 * Math.sin(t * 0.22 + 1.6) - 0.4;
+            marker2.position.copy(spot2.position);
+
+            // 光晕呼吸
+            glowMat.opacity = 0.07 + 0.04 * Math.sin(t * 0.4 + 0.5);
+
+            // 星星微动
+            stars.rotation.y = t * 0.006;
+            stars.rotation.x = Math.sin(t * 0.003) * 0.02;
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
