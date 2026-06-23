@@ -26,7 +26,7 @@
     const BLEND_MODES = ['screen', 'screen', 'screen', 'overlay', 'screen'];
 
     /* ── 生成随机色块 ── */
-    const blobCount = 8 + Math.floor(Math.random() * 5); // 8~12
+    const blobCount = 4;
     const blobs = [];
 
     for (let i = 0; i < blobCount; i++) {
