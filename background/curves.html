@@ -295,6 +295,17 @@
             return hex + Math.floor(a).toString(16).padStart(2, '0');
         }
 
+        /** 淡化 hex 颜色 (amount: 0~1, 越大越接近白色) */
+        function lightenHex(hex, amount) {
+            const r = parseInt(hex.slice(1,3), 16);
+            const g = parseInt(hex.slice(3,5), 16);
+            const b = parseInt(hex.slice(5,7), 16);
+            const nr = Math.min(255, Math.round(r + (255 - r) * amount));
+            const ng = Math.min(255, Math.round(g + (255 - g) * amount));
+            const nb = Math.min(255, Math.round(b + (255 - b) * amount));
+            return '#' + [nr, ng, nb].map(v => v.toString(16).padStart(2, '0')).join('');
+        }
+
         /**
          * 绘制C形弧线（水墨笔触）
          */
@@ -354,22 +365,29 @@
             ctx.fill();
             ctx.shadowBlur = 0;
 
-            // — 第2层：淡墨渲染 (wash layer) —
+            // — 第2层：淡墨渲染 (wash layer) — 增强渐变 —
             sampleVariableStroke(ctx, pts.map(p => ({ ...p, w: p.w * 1.3 + 1 * s })));
             const a2 = Math.round(opacity * 55);
-            const grad = ctx.createLinearGradient(-r, -r, r, r);
-            grad.addColorStop(0, hexAlpha(c1, a2));
-            grad.addColorStop(0.5, hexAlpha(c2, Math.round(a2 * 0.8)));
-            grad.addColorStop(1, hexAlpha(c3, Math.round(a2 * 0.9)));
+            const hl = lightenHex(c1, 0.30);
+            const grad = ctx.createLinearGradient(-r, -r*0.5, r, r*0.5);
+            grad.addColorStop(0,   hexAlpha(hl, Math.round(a2 * 1.3)));
+            grad.addColorStop(0.25, hexAlpha(c1, a2));
+            grad.addColorStop(0.50, hexAlpha(c2, Math.round(a2 * 0.8)));
+            grad.addColorStop(0.75, hexAlpha(c3, Math.round(a2 * 0.7)));
+            grad.addColorStop(1,   hexAlpha(c1, Math.round(a2 * 0.5)));
             ctx.fillStyle = grad;
             ctx.shadowColor = c1;
             ctx.shadowBlur = 6 * s;
             ctx.fill();
             ctx.shadowBlur = 0;
 
-            // — 第3层：焦墨核心 (core ink) —
+            // — 第3层：焦墨核心 (core ink) — 渐变核心 —
             sampleVariableStroke(ctx, pts.map(p => ({ ...p, w: p.w * 0.45 + 0.3 * s })));
-            ctx.fillStyle = hexAlpha(c1, Math.round(opacity * 140));
+            const coreGrad = ctx.createLinearGradient(-r*0.3, -r*0.3, r*0.3, r*0.3);
+            coreGrad.addColorStop(0,   hexAlpha(c1, Math.round(opacity * 180)));
+            coreGrad.addColorStop(0.5, hexAlpha(c2, Math.round(opacity * 140)));
+            coreGrad.addColorStop(1,   hexAlpha(c1, Math.round(opacity * 100)));
+            ctx.fillStyle = coreGrad;
             ctx.shadowColor = c1;
             ctx.shadowBlur = 2 * s;
             ctx.fill();
@@ -381,6 +399,31 @@
                 sampleVariableStroke(ctx, dryPts.map(p => ({ ...p, w: p.w * 0.2 })));
                 ctx.fillStyle = hexAlpha(c2, Math.round(opacity * 60));
                 ctx.fill();
+            }
+
+            // — 第5层：局部高光 (specular highlights) —
+            if (opacity > 0.20) {
+                const hlPos = [0.30, 0.65];
+                for (const hu of hlPos) {
+                    const ha = arcStart + (arcEnd - arcStart) * hu;
+                    const hlx = r * Math.cos(ha);
+                    const hly = r * Math.sin(ha);
+                    const hr = maxW * s * (0.4 + depth * 0.4);
+
+                    ctx.beginPath();
+                    ctx.arc(hlx, hly, hr * 0.8, 0, Math.PI * 2);
+                    ctx.fillStyle = hexAlpha('#c0d8ff', Math.round(opacity * 25));
+                    ctx.shadowColor = '#c0d8ff';
+                    ctx.shadowBlur = 14 * s;
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.arc(hlx, hly, hr * 0.25, 0, Math.PI * 2);
+                    ctx.fillStyle = hexAlpha('#e8f0ff', Math.round(opacity * 30));
+                    ctx.shadowBlur = 4 * s;
+                    ctx.fill();
+                }
+                ctx.shadowBlur = 0;
             }
 
             ctx.restore();
@@ -456,22 +499,29 @@
             ctx.fill();
             ctx.shadowBlur = 0;
 
-            // — 淡墨渲染 —
+            // — 淡墨渲染 — 增强渐变 —
             sampleVariableStroke(ctx, pts.map(p => ({ ...p, w: p.w * 1.3 + 1 * s })));
             const a2 = Math.round(opacity * 55);
+            const hl = lightenHex(c1, 0.30);
             const grad = ctx.createLinearGradient(-r*0.5, -a*0.5, r*0.5, a*0.5);
-            grad.addColorStop(0, hexAlpha(c1, a2));
-            grad.addColorStop(0.5, hexAlpha(c2, Math.round(a2 * 0.8)));
-            grad.addColorStop(1, hexAlpha(c3, Math.round(a2 * 0.9)));
+            grad.addColorStop(0,   hexAlpha(hl, Math.round(a2 * 1.3)));
+            grad.addColorStop(0.25, hexAlpha(c1, a2));
+            grad.addColorStop(0.50, hexAlpha(c2, Math.round(a2 * 0.8)));
+            grad.addColorStop(0.75, hexAlpha(c3, Math.round(a2 * 0.7)));
+            grad.addColorStop(1,   hexAlpha(c1, Math.round(a2 * 0.5)));
             ctx.fillStyle = grad;
             ctx.shadowColor = c1;
             ctx.shadowBlur = 6 * s;
             ctx.fill();
             ctx.shadowBlur = 0;
 
-            // — 焦墨核心 —
+            // — 焦墨核心 — 渐变核心 —
             sampleVariableStroke(ctx, pts.map(p => ({ ...p, w: p.w * 0.45 + 0.3 * s })));
-            ctx.fillStyle = hexAlpha(c1, Math.round(opacity * 140));
+            const coreGrad = ctx.createLinearGradient(-r*0.3, -a*0.3, r*0.3, a*0.3);
+            coreGrad.addColorStop(0,   hexAlpha(c1, Math.round(opacity * 180)));
+            coreGrad.addColorStop(0.5, hexAlpha(c2, Math.round(opacity * 140)));
+            coreGrad.addColorStop(1,   hexAlpha(c1, Math.round(opacity * 100)));
+            ctx.fillStyle = coreGrad;
             ctx.shadowColor = c1;
             ctx.shadowBlur = 2 * s;
             ctx.fill();
@@ -483,6 +533,31 @@
                 sampleVariableStroke(ctx, dryPts.map(p => ({ ...p, w: p.w * 0.2 })));
                 ctx.fillStyle = hexAlpha(c2, Math.round(opacity * 60));
                 ctx.fill();
+            }
+
+            // — 局部高光 (specular highlights) —
+            if (opacity > 0.20) {
+                const hlPos = [0.25, 0.75];
+                for (const hu of hlPos) {
+                    const u1 = 1 - hu;
+                    const hlx = u1*u1*u1*p0x + 3*u1*u1*hu*p1x + 3*u1*hu*hu*p2x + hu*hu*hu*p3x;
+                    const hly = u1*u1*u1*p0y + 3*u1*u1*hu*p1y + 3*u1*hu*hu*p2y + hu*hu*hu*p3y;
+                    const hr = maxW * s * (0.4 + depth * 0.4);
+
+                    ctx.beginPath();
+                    ctx.arc(hlx, hly, hr * 0.8, 0, Math.PI * 2);
+                    ctx.fillStyle = hexAlpha('#c0d8ff', Math.round(opacity * 25));
+                    ctx.shadowColor = '#c0d8ff';
+                    ctx.shadowBlur = 14 * s;
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.arc(hlx, hly, hr * 0.25, 0, Math.PI * 2);
+                    ctx.fillStyle = hexAlpha('#e8f0ff', Math.round(opacity * 30));
+                    ctx.shadowBlur = 4 * s;
+                    ctx.fill();
+                }
+                ctx.shadowBlur = 0;
             }
 
             ctx.restore();
