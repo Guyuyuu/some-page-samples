@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>彩色渐变曲线 · C 形 S 形 · 鼠标变换</title>
+    <title>水墨渐变 · 游丝 · 散逸</title>
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; overflow: hidden; }
 
         body {
-            background: #05050e;
+            background: #08080f;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -31,17 +31,18 @@
             z-index: 1;
         }
 
-        /* ── 背景网格 ── */
-        .bg-grid {
+        /* ── 宣纸纹理模拟 ── */
+        .paper-bg {
             position: fixed; inset: 0; z-index: 0;
-            background-image:
+            background:
+                /* 微弱颗粒感 */
+                repeating-conic-gradient(rgba(255,255,255,0.003) 0% 25%, transparent 0% 50%)
+                    0 0 / 240px 240px,
+                /* 极淡竖纹 */
                 repeating-linear-gradient(
-                    to right, rgba(255,255,255,0.018) 0px, rgba(255,255,255,0.018) 1px,
-                    transparent 1px, transparent 60px
-                ),
-                repeating-linear-gradient(
-                    to bottom, rgba(255,255,255,0.018) 0px, rgba(255,255,255,0.018) 1px,
-                    transparent 1px, transparent 60px
+                    to right,
+                    transparent 0px, transparent 38px,
+                    rgba(255,255,255,0.008) 38px, rgba(255,255,255,0.008) 40px
                 );
             pointer-events: none;
         }
@@ -49,11 +50,11 @@
         /* ── 环境光晕 ── */
         .ambient-glow {
             position: fixed;
-            width: 80vmin; height: 80vmin;
-            top: 50%; left: 50%;
+            width: 90vmin; height: 90vmin;
+            top: 40%; left: 50%;
             transform: translate(-50%, -50%);
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(120,100,255,0.05) 0%, transparent 60%);
+            background: radial-gradient(circle, rgba(100,120,200,0.04) 0%, transparent 55%);
             pointer-events: none;
             z-index: 0;
         }
@@ -65,47 +66,47 @@
             transform: translateX(-50%);
             z-index: 2;
             text-align: center;
-            color: rgba(255,255,255,0.70);
-            padding: 0.7rem 2rem;
-            border-radius: 16px;
+            color: rgba(255,255,255,0.50);
+            padding: 0.6rem 1.8rem;
+            border-radius: 14px;
             user-select: none;
-            background: rgba(255,255,255,0.03);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.05);
-            box-shadow: 0 4px 32px rgba(0,0,0,0.35);
+            background: rgba(255,255,255,0.025);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.04);
+            box-shadow: 0 4px 28px rgba(0,0,0,0.30);
             pointer-events: none;
-            transition: opacity 1.2s ease;
+            transition: opacity 1.5s ease;
             opacity: 1;
         }
         .glass-panel.fade-out { opacity: 0; }
         .glass-panel h2 {
-            font-size: clamp(0.8rem, 1.6vw, 1.3rem);
-            font-weight: 300;
-            letter-spacing: 4px;
-            background: linear-gradient(135deg, #b4c2ee, #7a8ac8);
+            font-size: clamp(0.7rem, 1.3vw, 1.1rem);
+            font-weight: 200;
+            letter-spacing: 6px;
+            background: linear-gradient(135deg, #9aacd4, #6a7aaa);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
         .glass-panel p {
-            font-size: clamp(0.55rem, 0.8vw, 0.75rem);
+            font-size: clamp(0.5rem, 0.7vw, 0.65rem);
             font-weight: 200;
-            letter-spacing: 3px;
-            opacity: 0.30;
+            letter-spacing: 5px;
+            opacity: 0.25;
             margin-top: 2px;
-            color: #8899cc;
+            color: #7a8aaa;
         }
     </style>
 </head>
 <body>
     <div id="app">
-        <div class="bg-grid"></div>
+        <div class="paper-bg"></div>
         <div class="ambient-glow"></div>
         <canvas ref="canvasRef"></canvas>
-        <div class="glass-panel" ref="panelRef" :class="{ 'fade-out': !showPanel }">
-            <h2>✦ 渐变曲线 · C 形 S 形 ✦</h2>
-            <p>鼠标拖拽旋转 · 滚轮缩放 · 横向拉伸</p>
+        <div class="glass-panel" :class="{ 'fade-out': !showPanel }">
+            <h2>✦ 水墨 · 游丝 ✦</h2>
+            <p>C 形 · S 形 · 散逸飘游</p>
         </div>
     </div>
 
@@ -130,279 +131,359 @@
         const randInt = (min, max) => Math.floor(rand(min, max + 1));
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // 调色板
+        // 水墨调色板
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-        const PALETTES = [
-            ['#ff6b6b', '#feca57'],
-            ['#feca57', '#48dbfb'],
-            ['#48dbfb', '#ff9ff3'],
-            ['#ff9ff3', '#54a0ff'],
-            ['#54a0ff', '#5f27cd'],
-            ['#5f27cd', '#ff6b6b'],
-            ['#1dd1a1', '#feca57'],
-            ['#ff6348', '#7bed9f'],
-            ['#70a1ff', '#ff6b81'],
-            ['#a29bfe', '#fd79a8'],
-            ['#00cec9', '#ffeaa7'],
-            ['#e17055', '#00b894'],
-            ['#f368e0', '#ff9f43'],
-            ['#0abde3', '#10ac84'],
-            ['#ee5a24', '#a29bfe'],
-            ['#5f27cd', '#feca57'],
+        const INK_WASH = [
+            // 纯墨 (pure ink)
+            ['#0a0a12', '#16161e', '#22223a'],
+            ['#0a0a12', '#1a1a26', '#2a2a3e'],
+            ['#0c0c14', '#1e1e2a', '#2e2e42'],
+            ['#08080e', '#141420', '#202036'],
+
+            // 青墨 (blue-black ink)
+            ['#0a0a14', '#121e2a', '#1c2e3e'],
+            ['#0c0c16', '#162232', '#203446'],
+            ['#080810', '#0e1a24', '#1a2c3c'],
+
+            // 暖墨 (warm ink)
+            ['#0e0c0a', '#1c1612', '#2a221e'],
+            ['#100c08', '#1e1812', '#2c241e'],
+            ['#0a0806', '#16120e', '#221c18'],
+
+            // 淡彩 (subtle color wash)
+            ['#0c0c18', '#14202e', '#1e3044'],
+            ['#0e0e1a', '#1c202c', '#2a303e'],
+            ['#0a0e12', '#141e1e', '#202e2e'],
+            ['#0e0a0e', '#1c1620', '#2a2230'],
+            ['#0c0e14', '#161e22', '#222e34'],
+            ['#0e0c12', '#1c1822', '#2a2432'],
+
+            // 轻彩 (lighter washes - for ethereal effect)
+            ['#14142a', '#202e42', '#2e4056'],
+            ['#16182a', '#222e3e', '#304054'],
+            ['#12162a', '#1e283e', '#2a3a4e'],
+            ['#141028', '#1e1e36', '#2c2e48'],
         ];
 
-        function pickPalette(index) {
-            return PALETTES[index % PALETTES.length];
-        }
-
-        function hexToRgba(hex, alpha = 1) {
-            const r = parseInt(hex.slice(1, 3), 16);
-            const g = parseInt(hex.slice(3, 5), 16);
-            const b = parseInt(hex.slice(5, 7), 16);
-            return `rgba(${r},${g},${b},${alpha})`;
-        }
-
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // 曲线生成
+        // 曲线生成（散落全页）
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-        function createCCurve(opts = {}) {
-            const size = opts.size || rand(30, 120);
-            return {
-                type: 'C',
-                x: opts.x || 0,
-                y: opts.y || 0,
-                size,
-                lineWidth: opts.lineWidth || rand(3, 12),
-                rotation: opts.rotation || rand(0, Math.PI * 2),
-                palette: opts.palette || randInt(0, PALETTES.length - 1),
-                phase: opts.phase || rand(0, Math.PI * 2),
-                floatAmp: opts.floatAmp || rand(0.3, 1.2),
-                floatSpeed: opts.floatSpeed || rand(0.2, 0.6),
-                depth: opts.depth || rand(0.3, 1.0),
-                glowSize: opts.glowSize || rand(8, 20),
-                opacity: opts.opacity ?? rand(0.35, 0.85),
-                arcStart: Math.PI * 0.20,
-                arcEnd: Math.PI * 1.80,
-            };
-        }
-
-        function createSCurve(opts = {}) {
-            const size = opts.size || rand(40, 140);
-            const amp = opts.amp ?? rand(0.3, 0.7);
-            return {
-                type: 'S',
-                x: opts.x || 0,
-                y: opts.y || 0,
-                size,
-                amplitude: size * amp,
-                lineWidth: opts.lineWidth || rand(3, 10),
-                rotation: opts.rotation || rand(0, Math.PI * 2),
-                palette: opts.palette || randInt(0, PALETTES.length - 1),
-                phase: opts.phase || rand(0, Math.PI * 2),
-                floatAmp: opts.floatAmp || rand(0.3, 1.0),
-                floatSpeed: opts.floatSpeed || rand(0.2, 0.6),
-                depth: opts.depth || rand(0.3, 1.0),
-                glowSize: opts.glowSize || rand(8, 20),
-                opacity: opts.opacity ?? rand(0.35, 0.85),
-            };
-        }
-
-        function generateCurves(count = 48) {
+        /**
+         * 生成水墨风格笔画曲线
+         * 每条曲线有独立位置（相对于视口百分比）、
+         * 变宽度笔触（起笔/中锋/收笔粗细不同）、
+         * 独立漂浮参数
+         */
+        function generateInkCurves(count = 60) {
             const curves = [];
-            const halfRange = 1.6;
-            const depthLayers = [
-                { count: 0.25, depthRange: [0.1, 0.35], sizeScale: 0.5, opacityRange: [0.15, 0.35] },
-                { count: 0.35, depthRange: [0.35, 0.65], sizeScale: 0.75, opacityRange: [0.30, 0.55] },
-                { count: 0.40, depthRange: [0.65, 1.0], sizeScale: 1.0, opacityRange: [0.50, 0.85] },
+
+            // 三个景深层次
+            const layers = [
+                { ratio: 0.20, depthBase: 0.08, depthSpan: 0.18, sizeScale: 0.35, opacityBase: 0.08, opacitySpan: 0.12, countScale: 1.0 },
+                { ratio: 0.35, depthBase: 0.28, depthSpan: 0.22, sizeScale: 0.55, opacityBase: 0.15, opacitySpan: 0.20, countScale: 1.8 },
+                { ratio: 0.30, depthBase: 0.52, depthSpan: 0.22, sizeScale: 0.75, opacityBase: 0.25, opacitySpan: 0.25, countScale: 2.5 },
+                { ratio: 0.15, depthBase: 0.76, depthSpan: 0.20, sizeScale: 1.00, opacityBase: 0.35, opacitySpan: 0.30, countScale: 3.5 },
             ];
 
-            let idx = 0;
-            for (const layer of depthLayers) {
-                const n = Math.floor(count * layer.count);
+            for (const layer of layers) {
+                const n = Math.round(count * layer.ratio);
                 for (let i = 0; i < n; i++) {
-                    const depth = rand(layer.depthRange[0], layer.depthRange[1]);
-                    const baseSize = rand(40, 160) * layer.sizeScale;
-                    const palette = randInt(0, PALETTES.length - 1);
+                    const depth = layer.depthBase + rand(0, layer.depthSpan);
+
+                    // 位置：0~1 映射到全页，边缘也有分布
+                    const px = rand(-0.10, 1.10);
+                    const py = rand(-0.10, 1.10);
+                    // 靠近边缘的曲线变小变淡
+                    const edgeDist = Math.min(
+                        Math.abs(px - 0.5) * 1.6,
+                        Math.abs(py - 0.5) * 1.6,
+                        0.5
+                    ) * 2;
+                    const edgeFade = 1 - Math.max(0, edgeDist - 0.6) * 0.6;
+
+                    const paletteIdx = randInt(0, INK_WASH.length - 1);
+                    const isC = Math.random() < 0.48;
+                    const size = rand(30, 160) * layer.sizeScale;
                     const rotation = rand(0, Math.PI * 2);
-                    const x = rand(-halfRange, halfRange);
-                    const y = rand(-halfRange, halfRange);
-                    const phase = rand(0, Math.PI * 2);
-                    const isC = Math.random() < 0.5;
+
+                    // 笔触变宽度参数：起笔、中锋、收笔的相对宽度
+                    const wMode = randInt(0, 3);
+                    let ws, wm, we;
+                    switch (wMode) {
+                        case 0: /* 起笔重→收笔轻 */ ws = 1.0; wm = 0.7; we = 0.3; break;
+                        case 1: /* 起笔轻→收笔重 */ ws = 0.2; wm = 0.6; we = 1.0; break;
+                        case 2: /* 两头轻中间重 */   ws = 0.3; wm = 1.0; we = 0.2; break;
+                        case 3: /* 均匀渐变 */       ws = 0.5; wm = 0.9; we = 0.4; break;
+                    }
+                    // 随机微调
+                    ws *= rand(0.7, 1.3);
+                    wm *= rand(0.7, 1.3);
+                    we *= rand(0.7, 1.3);
+
+                    // 最大笔触宽度
+                    const maxW = rand(1.5, 12) * (0.3 + depth * 0.7) * (0.8 + size / 200);
+
+                    // 漂浮参数 (慢速、轻柔)
+                    const floatSpeed = rand(0.08, 0.28);
+                    const floatAmp = rand(0.3, 1.6) * (0.3 + depth * 0.7);
+                    const phaseX = rand(0, Math.PI * 2);
+                    const phaseY = rand(0, Math.PI * 2);
+
+                    const opacity = (layer.opacityBase + rand(0, layer.opacitySpan)) * edgeFade;
 
                     const common = {
-                        x, y,
-                        size: baseSize,
-                        lineWidth: rand(2, 10) * (0.5 + depth * 0.5),
+                        px, py,
+                        size,
                         rotation,
-                        palette,
-                        phase,
-                        floatAmp: rand(0.2, 0.8) * depth,
-                        floatSpeed: rand(0.15, 0.5),
+                        palette: paletteIdx,
+                        ws, wm, we,
+                        maxW,
+                        floatSpeed, floatAmp, phaseX, phaseY,
                         depth,
-                        glowSize: rand(5, 18) * depth,
-                        opacity: rand(layer.opacityRange[0], layer.opacityRange[1]),
+                        opacity: clamp(opacity, 0.02, 0.9),
                     };
 
                     if (isC) {
-                        curves.push(createCCurve(common));
+                        // C 形弧线 —— 开口方向随机
+                        const arcStart = rand(0, Math.PI * 0.3);
+                        const arcEnd = Math.PI * 2 - rand(0, Math.PI * 0.3);
+                        curves.push({ ...common, type: 'C', arcStart, arcEnd });
                     } else {
-                        curves.push(createSCurve({
-                            ...common,
-                            amp: rand(0.25, 0.65),
-                        }));
+                        // S 形曲线 —— 振幅随机
+                        const amp = rand(0.25, 0.70);
+                        curves.push({ ...common, type: 'S', amp });
                     }
-                    idx++;
                 }
             }
             return curves;
         }
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // 渲染器
+        // 变宽度笔触渲染
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-        function drawCCurve(ctx, curve, scale, time) {
-            const { x, y, size, lineWidth, rotation, palette, phase,
-                    floatAmp, floatSpeed, depth, glowSize, opacity, arcStart, arcEnd } = curve;
+        /**
+         * 沿路径采样点，每点计算法线方向和该点宽度，
+         * 生成闭合填充路径实现变宽度描边。
+         */
+        function sampleVariableStroke(ctx, points) {
+            if (points.length < 2) return;
+            ctx.beginPath();
+            ctx.moveTo(
+                points[0].x + points[0].nx * points[0].w * 0.5,
+                points[0].y + points[0].ny * points[0].w * 0.5
+            );
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(
+                    points[i].x + points[i].nx * points[i].w * 0.5,
+                    points[i].y + points[i].ny * points[i].w * 0.5
+                );
+            }
+            for (let i = points.length - 1; i >= 0; i--) {
+                ctx.lineTo(
+                    points[i].x - points[i].nx * points[i].w * 0.5,
+                    points[i].y - points[i].ny * points[i].w * 0.5
+                );
+            }
+            ctx.closePath();
+        }
 
-            const paletteColors = pickPalette(palette);
-            const c1 = paletteColors[0];
-            const c2 = paletteColors[1];
+        /** hex 颜色 + alpha (0-255) → 8位 hex */
+        function hexAlpha(hex, a) {
+            return hex + Math.floor(a).toString(16).padStart(2, '0');
+        }
 
-            const floatOffset = Math.sin(time * floatSpeed + phase) * floatAmp;
-            const r = size * scale;
-            const lw = Math.max(1.5, lineWidth * scale * (0.6 + 0.4 * depth));
+        /**
+         * 绘制C形弧线（水墨笔触）
+         */
+        function drawInkC(ctx, c, s, t, mx, my) {
+            const { px, py, size, rotation, ws, wm, we, maxW, palette,
+                    floatSpeed, floatAmp, phaseX, phaseY, depth, opacity,
+                    arcStart, arcEnd } = c;
+
+            const colors = INK_WASH[palette % INK_WASH.length];
+            const c1 = colors[0];
+            const c2 = colors[1 % colors.length];
+            const c3 = colors[2 % colors.length];
+
+            // 漂浮偏移
+            const fx = Math.sin(t * floatSpeed + phaseX) * floatAmp;
+            const fy = Math.cos(t * floatSpeed * 0.7 + phaseY) * floatAmp * 0.8;
+
+            // 鼠标影响 (微风推涌)
+            const mouseInfX = mx * 14 * (0.4 + depth * 0.6);
+            const mouseInfY = my * 14 * (0.4 + depth * 0.6);
+
+            const r = size * s;
+            const steps = Math.max(40, Math.floor(r * 0.8));
+
+            // 视口坐标
+            const cx = px * ctx.canvas.width + fx + mouseInfX;
+            const cy = py * ctx.canvas.height + fy + mouseInfY;
 
             ctx.save();
-
-            const px = x * scale + floatOffset * 0.3;
-            const py = y * scale + floatOffset * 0.2;
-            ctx.translate(px, py);
+            ctx.translate(cx, cy);
             ctx.rotate(rotation);
 
-            // — 发光层 —
-            ctx.beginPath();
-            ctx.arc(0, 0, r, arcStart, arcEnd, false);
-            ctx.strokeStyle = hexToRgba(c1, opacity * 0.25);
-            ctx.lineWidth = lw + glowSize * scale * 0.5;
-            ctx.lineCap = 'round';
+            // 沿弧采样
+            const pts = [];
+            for (let i = 0; i <= steps; i++) {
+                const u = i / steps;
+                const angle = arcStart + (arcEnd - arcStart) * u;
+
+                // 宽度沿弧变化 (二次插值)
+                const w = (ws * (1 - u) * (1 - u) + wm * 2 * u * (1 - u) + we * u * u) * maxW * s;
+
+                const px2 = r * Math.cos(angle);
+                const py2 = r * Math.sin(angle);
+
+                // 弧的法线 = 径向方向
+                const nx = Math.cos(angle);
+                const ny = Math.sin(angle);
+
+                pts.push({ x: px2, y: py2, nx, ny, w });
+            }
+
+            // — 第1层：墨晕渗化 (ink bleed) —
+            sampleVariableStroke(ctx, pts.map(p => ({ ...p, w: p.w * 1.8 + 3 * s })));
+            ctx.fillStyle = hexAlpha(c1, 20);
             ctx.shadowColor = c1;
-            ctx.shadowBlur = glowSize * scale * 1.2;
-            ctx.stroke();
-
-            // — 渐变过渡层 —
-            const grad = ctx.createLinearGradient(
-                r * Math.cos(arcStart), r * Math.sin(arcStart),
-                r * Math.cos(arcEnd), r * Math.sin(arcEnd)
-            );
-            grad.addColorStop(0, hexToRgba(c1, opacity * 0.6));
-            grad.addColorStop(0.5, hexToRgba(c2, opacity * 0.5));
-            grad.addColorStop(1, hexToRgba(c2, opacity * 0.6));
-
-            ctx.beginPath();
-            ctx.arc(0, 0, r, arcStart, arcEnd, false);
-            ctx.strokeStyle = grad;
-            ctx.lineWidth = lw * 1.1;
-            ctx.lineCap = 'round';
-            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 18 * s;
+            ctx.fill();
             ctx.shadowBlur = 0;
-            ctx.stroke();
 
-            // — 高光核心线 —
-            const gradCore = ctx.createLinearGradient(
-                r * Math.cos(arcStart), r * Math.sin(arcStart),
-                r * Math.cos(arcEnd), r * Math.sin(arcEnd)
-            );
-            gradCore.addColorStop(0, hexToRgba(c1, opacity));
-            gradCore.addColorStop(0.5, hexToRgba(c2, opacity * 0.8));
-            gradCore.addColorStop(1, hexToRgba(c2, opacity));
-
-            ctx.beginPath();
-            ctx.arc(0, 0, r, arcStart, arcEnd, false);
-            ctx.strokeStyle = gradCore;
-            ctx.lineWidth = Math.max(1, lw * 0.45);
-            ctx.lineCap = 'round';
+            // — 第2层：淡墨渲染 (wash layer) —
+            sampleVariableStroke(ctx, pts.map(p => ({ ...p, w: p.w * 1.3 + 1 * s })));
+            const a2 = Math.round(opacity * 55);
+            const grad = ctx.createLinearGradient(-r, -r, r, r);
+            grad.addColorStop(0, hexAlpha(c1, a2));
+            grad.addColorStop(0.5, hexAlpha(c2, Math.round(a2 * 0.8)));
+            grad.addColorStop(1, hexAlpha(c3, Math.round(a2 * 0.9)));
+            ctx.fillStyle = grad;
             ctx.shadowColor = c1;
-            ctx.shadowBlur = 4 * scale;
-            ctx.stroke();
+            ctx.shadowBlur = 6 * s;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // — 第3层：焦墨核心 (core ink) —
+            sampleVariableStroke(ctx, pts.map(p => ({ ...p, w: p.w * 0.45 + 0.3 * s })));
+            ctx.fillStyle = hexAlpha(c1, Math.round(opacity * 140));
+            ctx.shadowColor = c1;
+            ctx.shadowBlur = 2 * s;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // — 第4层：枯笔飞白 (dry brush accent, 仅较深曲线) —
+            if (opacity > 0.3 && depth > 0.3) {
+                const dryPts = pts.filter((_, i) => i % 3 === 0);
+                sampleVariableStroke(ctx, dryPts.map(p => ({ ...p, w: p.w * 0.2 })));
+                ctx.fillStyle = hexAlpha(c2, Math.round(opacity * 60));
+                ctx.fill();
+            }
 
             ctx.restore();
         }
 
-        function drawSCurve(ctx, curve, scale, time) {
-            const { x, y, size, amplitude, lineWidth, rotation, palette, phase,
-                    floatAmp, floatSpeed, depth, glowSize, opacity } = curve;
+        /**
+         * 绘制S形曲线（水墨笔触）
+         */
+        function drawInkS(ctx, c, s, t, mx, my) {
+            const { px, py, size, rotation, ws, wm, we, maxW, palette,
+                    floatSpeed, floatAmp, phaseX, phaseY, depth, opacity, amp } = c;
 
-            const paletteColors = pickPalette(palette);
-            const c1 = paletteColors[0];
-            const c2 = paletteColors[1];
+            const colors = INK_WASH[palette % INK_WASH.length];
+            const c1 = colors[0];
+            const c2 = colors[1 % colors.length];
+            const c3 = colors[2 % colors.length];
 
-            const floatOffset = Math.sin(time * floatSpeed + phase) * floatAmp;
-            const r = size * scale;
-            const amp = amplitude * scale;
-            const lw = Math.max(1.5, lineWidth * scale * (0.6 + 0.4 * depth));
+            // 漂浮偏移
+            const fx = Math.sin(t * floatSpeed + phaseX) * floatAmp;
+            const fy = Math.cos(t * floatSpeed * 0.7 + phaseY) * floatAmp * 0.8;
 
-            // S 曲线控制点
-            const halfLen = r * 0.5;
-            const cpOffX = amp * 0.2;
-            const cpOffY = amp * 0.85;
+            // 鼠标影响
+            const mouseInfX = mx * 18 * (0.4 + depth * 0.6);
+            const mouseInfY = my * 18 * (0.4 + depth * 0.6);
+
+            const r = size * s;
+            const a = amp * r;
+            const steps = 48;
+
+            // 视口坐标
+            const bx = px * ctx.canvas.width + fx + mouseInfX;
+            const by = py * ctx.canvas.height + fy + mouseInfY;
 
             ctx.save();
-
-            const px = x * scale + floatOffset * 0.3;
-            const py = y * scale + floatOffset * 0.2;
-            ctx.translate(px, py);
+            ctx.translate(bx, by);
             ctx.rotate(rotation);
 
-            // — 发光层 —
-            ctx.beginPath();
-            ctx.moveTo(-halfLen, 0);
-            ctx.bezierCurveTo(-halfLen * 0.2, -cpOffY, halfLen * 0.2, cpOffY, halfLen, 0);
-            ctx.strokeStyle = hexToRgba(c1, opacity * 0.20);
-            ctx.lineWidth = lw + glowSize * scale * 0.4;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
+            // S 形贝塞尔：P0→P1→P2→P3
+            const p0x = -r * 0.45, p0y = 0;
+            const p1x = -r * 0.10, p1y = -a * 0.80;
+            const p2x =  r * 0.10, p2y =  a * 0.80;
+            const p3x =  r * 0.45, p3y = 0;
+
+            // 采样点并计算切线与法线
+            const pts = [];
+            for (let i = 0; i <= steps; i++) {
+                const u = i / steps;
+                const u1 = 1 - u;
+
+                // 贝塞尔位置
+                const px2 = u1*u1*u1*p0x + 3*u1*u1*u*p1x + 3*u1*u*u*p2x + u*u*u*p3x;
+                const py2 = u1*u1*u1*p0y + 3*u1*u1*u*p1y + 3*u1*u*u*p2y + u*u*u*p3y;
+
+                // 贝塞尔切线
+                const tx = 3*u1*u1*(p1x-p0x) + 6*u1*u*(p2x-p1x) + 3*u*u*(p3x-p2x);
+                const ty = 3*u1*u1*(p1y-p0y) + 6*u1*u*(p2y-p1y) + 3*u*u*(p3y-p2y);
+                const len = Math.sqrt(tx*tx + ty*ty) || 1;
+                // 法线 (垂直于切线)
+                const nx = -ty / len;
+                const ny =  tx / len;
+
+                // 宽度沿S变化
+                const w = (ws * (1-u)*(1-u) + wm * 2*u*(1-u) + we * u*u) * maxW * s;
+
+                pts.push({ x: px2, y: py2, nx, ny, w });
+            }
+
+            // — 墨晕渗化 —
+            sampleVariableStroke(ctx, pts.map(p => ({ ...p, w: p.w * 1.8 + 3 * s })));
+            ctx.fillStyle = hexAlpha(c1, 20);
             ctx.shadowColor = c1;
-            ctx.shadowBlur = glowSize * scale * 1.0;
-            ctx.stroke();
-
-            // — 渐变过渡层 —
-            const grad = ctx.createLinearGradient(-halfLen, -cpOffY, halfLen, cpOffY);
-            grad.addColorStop(0, hexToRgba(c1, opacity * 0.55));
-            grad.addColorStop(0.4, hexToRgba(c2, opacity * 0.40));
-            grad.addColorStop(0.7, hexToRgba(c1, opacity * 0.45));
-            grad.addColorStop(1, hexToRgba(c2, opacity * 0.55));
-
-            ctx.beginPath();
-            ctx.moveTo(-halfLen, 0);
-            ctx.bezierCurveTo(-halfLen * 0.2, -cpOffY, halfLen * 0.2, cpOffY, halfLen, 0);
-            ctx.strokeStyle = grad;
-            ctx.lineWidth = lw * 1.0;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 18 * s;
+            ctx.fill();
             ctx.shadowBlur = 0;
-            ctx.stroke();
 
-            // — 高光核心线 —
-            const gradCore = ctx.createLinearGradient(-halfLen, -cpOffY, halfLen, cpOffY);
-            gradCore.addColorStop(0, hexToRgba(c1, opacity));
-            gradCore.addColorStop(0.3, hexToRgba(c2, opacity * 0.7));
-            gradCore.addColorStop(0.6, hexToRgba(c1, opacity * 0.6));
-            gradCore.addColorStop(1, hexToRgba(c2, opacity));
-
-            ctx.beginPath();
-            ctx.moveTo(-halfLen, 0);
-            ctx.bezierCurveTo(-halfLen * 0.2, -cpOffY, halfLen * 0.2, cpOffY, halfLen, 0);
-            ctx.strokeStyle = gradCore;
-            ctx.lineWidth = Math.max(1, lw * 0.40);
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
+            // — 淡墨渲染 —
+            sampleVariableStroke(ctx, pts.map(p => ({ ...p, w: p.w * 1.3 + 1 * s })));
+            const a2 = Math.round(opacity * 55);
+            const grad = ctx.createLinearGradient(-r*0.5, -a*0.5, r*0.5, a*0.5);
+            grad.addColorStop(0, hexAlpha(c1, a2));
+            grad.addColorStop(0.5, hexAlpha(c2, Math.round(a2 * 0.8)));
+            grad.addColorStop(1, hexAlpha(c3, Math.round(a2 * 0.9)));
+            ctx.fillStyle = grad;
             ctx.shadowColor = c1;
-            ctx.shadowBlur = 3 * scale;
-            ctx.stroke();
+            ctx.shadowBlur = 6 * s;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // — 焦墨核心 —
+            sampleVariableStroke(ctx, pts.map(p => ({ ...p, w: p.w * 0.45 + 0.3 * s })));
+            ctx.fillStyle = hexAlpha(c1, Math.round(opacity * 140));
+            ctx.shadowColor = c1;
+            ctx.shadowBlur = 2 * s;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // — 枯笔 —
+            if (opacity > 0.3 && depth > 0.3) {
+                const dryPts = pts.filter((_, i) => i % 3 === 0);
+                sampleVariableStroke(ctx, dryPts.map(p => ({ ...p, w: p.w * 0.2 })));
+                ctx.fillStyle = hexAlpha(c2, Math.round(opacity * 60));
+                ctx.fill();
+            }
 
             ctx.restore();
         }
@@ -414,71 +495,50 @@
         createApp({
             setup() {
                 const canvasRef = ref(null);
-                const panelRef = ref(null);
                 const showPanel = ref(true);
 
-                // — 状态 —
-                const curves = generateCurves(50);
+                // 生成曲线
+                const curves = generateInkCurves(64);
 
-                // 鼠标交互状态（带平滑）
+                // 交互状态
                 const state = {
-                    mouseX: 0,          // -1 ~ 1
-                    mouseY: 0,            // -1 ~ 1
-                    smoothRotX: 0,
-                    smoothRotY: 0,
+                    mouseX: 0,
+                    mouseY: 0,
+                    smoothInfX: 0,
+                    smoothInfY: 0,
                     smoothScale: 1,
-                    smoothStretchX: 1,
-                    smoothStretchY: 1,
-                    targetRotX: 0,
-                    targetRotY: 0,
                     targetScale: 1,
-                    targetStretchX: 1,
-                    targetStretchY: 1,
                     wheelScale: 1,
                     time: 0,
                 };
 
                 let animId = null;
-                let canvasW = 0;
-                let canvasH = 0;
 
-                // — 鼠标事件 —
+                // — 事件 —
                 function onMouseMove(e) {
                     const w = window.innerWidth;
                     const h = window.innerHeight;
                     state.mouseX = (e.clientX / w - 0.5) * 2;
                     state.mouseY = (e.clientY / h - 0.5) * 2;
-
-                    state.targetRotX = state.mouseY * 0.35;
-                    state.targetRotY = state.mouseX * 0.45;
-                    state.targetStretchX = 1 + state.mouseX * 0.25;
-                    state.targetStretchY = 1 + Math.abs(state.mouseY) * 0.15;
                 }
 
                 function onMouseLeave() {
                     state.mouseX = 0;
                     state.mouseY = 0;
-                    state.targetRotX = 0;
-                    state.targetRotY = 0;
-                    state.targetStretchX = 1;
-                    state.targetStretchY = 1;
                 }
 
                 function onWheel(e) {
-                    state.wheelScale = clamp(state.wheelScale - e.deltaY * 0.0006, 0.4, 2.5);
+                    state.wheelScale = clamp(state.wheelScale - e.deltaY * 0.0005, 0.4, 2.8);
                     state.targetScale = state.wheelScale;
                 }
 
                 function onResize() {
                     const canvas = canvasRef.value;
                     if (!canvas) return;
-                    canvasW = window.innerWidth;
-                    canvasH = window.innerHeight;
-                    canvas.width = canvasW * devicePixelRatio;
-                    canvas.height = canvasH * devicePixelRatio;
+                    canvas.width = window.innerWidth * devicePixelRatio;
+                    canvas.height = window.innerHeight * devicePixelRatio;
                 }
 
-                // — 触摸支持 —
                 function onTouchMove(e) {
                     e.preventDefault();
                     const touch = e.touches[0];
@@ -487,19 +547,11 @@
                     const h = window.innerHeight;
                     state.mouseX = (touch.clientX / w - 0.5) * 2;
                     state.mouseY = (touch.clientY / h - 0.5) * 2;
-                    state.targetRotX = state.mouseY * 0.35;
-                    state.targetRotY = state.mouseX * 0.45;
-                    state.targetStretchX = 1 + state.mouseX * 0.25;
-                    state.targetStretchY = 1 + Math.abs(state.mouseY) * 0.15;
                 }
 
                 function onTouchEnd() {
                     state.mouseX = 0;
                     state.mouseY = 0;
-                    state.targetRotX = 0;
-                    state.targetRotY = 0;
-                    state.targetStretchX = 1;
-                    state.targetStretchY = 1;
                 }
 
                 // — 动画循环 —
@@ -511,49 +563,33 @@
 
                     state.time += 0.016;
 
-                    // 平滑插值
-                    const ease = 0.045;
-                    state.smoothRotX = lerp(state.smoothRotX, state.targetRotX, ease);
-                    state.smoothRotY = lerp(state.smoothRotY, state.targetRotY, ease);
+                    // 平滑鼠标影响
+                    const ease = 0.035;
+                    state.smoothInfX = lerp(state.smoothInfX, state.mouseX, ease);
+                    state.smoothInfY = lerp(state.smoothInfY, state.mouseY, ease);
                     state.smoothScale = lerp(state.smoothScale, state.targetScale, ease);
-                    state.smoothStretchX = lerp(state.smoothStretchX, state.targetStretchX, ease);
-                    state.smoothStretchY = lerp(state.smoothStretchY, state.targetStretchY, ease);
 
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    // 清屏 (极深半透明叠加产生轨迹尾影)
+                    ctx.fillStyle = 'rgba(8,8,15,0.25)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                    // 总体变换
-                    const cx = canvas.width / 2;
-                    const cy = canvas.height / 2;
-                    const baseScale = Math.min(canvas.width, canvas.height) / 600;
+                    // 原始 DPR 缩放
+                    const dpr = devicePixelRatio;
+                    const baseScale = Math.min(canvas.width, canvas.height) / 800 * state.smoothScale;
 
-                    ctx.save();
-                    ctx.translate(cx, cy);
-                    ctx.scale(
-                        state.smoothScale * state.smoothStretchX,
-                        state.smoothScale * state.smoothStretchY
-                    );
-                    ctx.rotate(state.smoothRotX * 0.02);
-                    ctx.transform(
-                        1, state.smoothRotX * 0.008,
-                        state.smoothRotY * 0.008, 1,
-                        0, 0
-                    );
-
-                    // 按深度排序（远→近）
+                    // 按深度排序
                     const sorted = [...curves].sort((a, b) => a.depth - b.depth);
 
                     for (const c of sorted) {
-                        const depthScale = 0.3 + c.depth * 0.7;
+                        const depthScale = 0.25 + c.depth * 0.75;
                         const s = baseScale * depthScale;
 
                         if (c.type === 'C') {
-                            drawCCurve(ctx, c, s, state.time);
+                            drawInkC(ctx, c, s, state.time, state.smoothInfX, state.smoothInfY);
                         } else {
-                            drawSCurve(ctx, c, s, state.time);
+                            drawInkS(ctx, c, s, state.time, state.smoothInfX, state.smoothInfY);
                         }
                     }
-
-                    ctx.restore();
 
                     animId = requestAnimationFrame(animate);
                 }
@@ -563,12 +599,8 @@
                     const canvas = canvasRef.value;
                     if (!canvas) return;
 
-                    canvasW = window.innerWidth;
-                    canvasH = window.innerHeight;
-                    canvas.width = canvasW * devicePixelRatio;
-                    canvas.height = canvasH * devicePixelRatio;
-                    canvas.style.width = canvasW + 'px';
-                    canvas.style.height = canvasH + 'px';
+                    canvas.width = window.innerWidth * devicePixelRatio;
+                    canvas.height = window.innerHeight * devicePixelRatio;
 
                     document.addEventListener('mousemove', onMouseMove);
                     document.addEventListener('mouseleave', onMouseLeave);
@@ -577,7 +609,6 @@
                     document.addEventListener('touchmove', onTouchMove, { passive: false });
                     document.addEventListener('touchend', onTouchEnd);
 
-                    // 几秒后淡出面板
                     setTimeout(() => { showPanel.value = false; }, 5000);
 
                     animate();
@@ -593,7 +624,7 @@
                     document.removeEventListener('touchend', onTouchEnd);
                 });
 
-                return { canvasRef, panelRef, showPanel };
+                return { canvasRef, showPanel };
             }
         }).mount('#app');
     </script>
