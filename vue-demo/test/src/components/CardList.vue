@@ -217,6 +217,18 @@ function clearSearch() {
             >
               全部
             </button>
+            <!-- 快捷筛选：仅看前端 -->
+            <button
+              @click="setCategory('前端')"
+              :class="[
+                'rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200',
+                activeCategory === '前端'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-200'
+                  : 'bg-white text-emerald-600 ring-1 ring-emerald-300 hover:bg-emerald-50 hover:ring-emerald-400',
+              ]"
+            >
+              仅看前端
+            </button>
             <button
               v-for="cat in categories"
               :key="cat"
