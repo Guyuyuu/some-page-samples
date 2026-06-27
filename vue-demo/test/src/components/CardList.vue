@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import ArticleDetail from './ArticleDetail.vue'
 
 /* ============================================
  * 类型定义
@@ -106,6 +107,7 @@ const categories = computed<string[]>(() => {
 const searchQuery = ref('')
 const activeCategory = ref('全部')
 const sortBy = ref<'date' | 'title'>('date')
+const selectedCard = ref<CardItem | null>(null)
 
 /* ============================================
  * 计算属性：过滤 + 排序后的卡片列表
@@ -304,7 +306,8 @@ watch(searchQuery, (newVal, oldVal) => {
         <div
           v-for="card in filteredCards"
           :key="card.id"
-          class="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+          @click="selectedCard = card"
+          class="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
         >
           <!-- 卡片图片 -->
           <div class="relative h-40 overflow-hidden bg-gray-100 sm:h-44">
@@ -361,5 +364,12 @@ watch(searchQuery, (newVal, oldVal) => {
         </div>
       </div>
     </div>
+
+    <!-- 文章详情弹窗 -->
+    <ArticleDetail
+      v-if="selectedCard"
+      :card="selectedCard"
+      @close="selectedCard = null"
+    />
   </div>
 </template>
