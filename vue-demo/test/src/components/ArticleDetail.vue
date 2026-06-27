@@ -50,12 +50,12 @@ onUnmounted(() => {
   >
     <!-- 弹窗卡片 -->
     <div
-      class="relative w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl animate-[fadeIn_0.2s_ease-out]"
+      class="relative w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl animate-[fadeIn_0.2s_ease-out] dark:bg-gray-800"
     >
       <!-- 关闭按钮 -->
       <button
         @click="emit('close')"
-        class="absolute right-4 top-4 z-10 rounded-full bg-white/80 p-2 text-gray-500 shadow-sm backdrop-blur-sm transition-colors hover:bg-white hover:text-gray-800"
+        class="absolute right-4 top-4 z-10 rounded-full bg-white/80 p-2 text-gray-500 shadow-sm backdrop-blur-sm transition-colors hover:bg-white hover:text-gray-800 dark:bg-gray-700/80 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
         aria-label="关闭"
       >
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,7 +64,7 @@ onUnmounted(() => {
       </button>
 
       <!-- 图片 -->
-      <div class="relative h-56 overflow-hidden bg-gray-100 sm:h-64">
+      <div class="relative h-56 overflow-hidden bg-gray-100 sm:h-64 dark:bg-gray-700">
         <img
           :src="card.image"
           :alt="card.title"
@@ -72,7 +72,7 @@ onUnmounted(() => {
         />
         <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
         <span
-          class="absolute bottom-4 left-4 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-gray-700 shadow-sm backdrop-blur-sm"
+          class="absolute bottom-4 left-4 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-gray-700 shadow-sm backdrop-blur-sm dark:bg-gray-800/90 dark:text-gray-300"
         >
           {{ card.category }}
         </span>
@@ -81,29 +81,29 @@ onUnmounted(() => {
       <!-- 内容区 -->
       <div class="px-6 py-6 sm:px-8 sm:py-8">
         <!-- 标题 -->
-        <h2 class="text-2xl font-bold leading-tight text-gray-900">
+        <h2 class="text-2xl font-bold leading-tight text-gray-900 dark:text-gray-100">
           {{ card.title }}
         </h2>
 
         <!-- 日期 -->
-        <p class="mt-2 text-sm text-gray-400">发布于 {{ card.date }}</p>
+        <p class="mt-2 text-sm text-gray-400 dark:text-gray-500">发布于 {{ card.date }}</p>
 
         <!-- 标签 -->
         <div class="mt-4 flex flex-wrap gap-2">
           <span
             v-for="tag in card.tags"
             :key="tag"
-            class="inline-flex items-center rounded-lg bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-700 ring-1 ring-indigo-700/10"
+            class="inline-flex items-center rounded-lg bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-700 ring-1 ring-indigo-700/10 dark:bg-indigo-900/30 dark:text-indigo-300 dark:ring-indigo-400/20"
           >
             #{{ tag }}
           </span>
         </div>
 
         <!-- 分割线 -->
-        <hr class="my-6 border-gray-100" />
+        <hr class="my-6 border-gray-100 dark:border-gray-700" />
 
         <!-- 描述 -->
-        <p class="text-base leading-relaxed text-gray-600">
+        <p class="text-base leading-relaxed text-gray-600 dark:text-gray-300">
           {{ card.description }}
         </p>
 
@@ -111,7 +111,7 @@ onUnmounted(() => {
         <div class="mt-8 flex items-center justify-end gap-3">
           <button
             @click="emit('close')"
-            class="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            class="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
           >
             关闭
           </button>
