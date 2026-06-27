@@ -165,12 +165,12 @@ watch(searchQuery, (newVal, oldVal) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-10 sm:px-6 lg:px-8">
+  <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-10 sm:px-6 lg:px-8 dark:from-slate-950 dark:to-slate-900">
     <div class="mx-auto max-w-7xl">
       <!-- 页面标题 -->
       <div class="mb-10 text-center">
-        <h1 class="text-4xl font-bold tracking-tight text-gray-900">📚 技术文章库</h1>
-        <p class="mt-2 text-lg text-gray-500">浏览、搜索和筛选你感兴趣的技术文章</p>
+        <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">📚 技术文章库</h1>
+        <p class="mt-2 text-lg text-gray-500 dark:text-gray-400">浏览、搜索和筛选你感兴趣的技术文章</p>
       </div>
 
       <!-- 搜索与控制栏 -->
@@ -178,7 +178,7 @@ watch(searchQuery, (newVal, oldVal) => {
         <!-- 搜索框 -->
         <div class="relative mx-auto max-w-2xl">
           <div
-            class="flex items-center rounded-xl border border-gray-200 bg-white shadow-sm ring-1 ring-gray-900/5 transition-all duration-200 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-200"
+            class="flex items-center rounded-xl border border-gray-200 bg-white shadow-sm ring-1 ring-gray-900/5 transition-all duration-200 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-200 dark:border-gray-700 dark:bg-gray-800 dark:ring-gray-700/20 dark:focus-within:border-indigo-500 dark:focus-within:ring-indigo-500/30"
           >
             <!-- 搜索图标 -->
             <svg
@@ -198,13 +198,13 @@ watch(searchQuery, (newVal, oldVal) => {
               v-model="searchQuery"
               type="text"
               placeholder="搜索文章标题、描述或标签…"
-              class="w-full border-none bg-transparent px-3 py-3.5 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-0"
+              class="w-full border-none bg-transparent px-3 py-3.5 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-0 dark:text-gray-200 dark:placeholder-gray-500"
             />
             <!-- 清除按钮 -->
             <button
               v-if="searchQuery"
               @click="clearSearch"
-              class="mr-2 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+              class="mr-2 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-400"
               aria-label="清除搜索"
             >
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,7 +224,7 @@ watch(searchQuery, (newVal, oldVal) => {
                 'rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200',
                 activeCategory === '全部'
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                  : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50 hover:ring-gray-300',
+                  : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50 hover:ring-gray-300 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-gray-700 dark:hover:ring-gray-600',
               ]"
             >
               全部
@@ -236,7 +236,7 @@ watch(searchQuery, (newVal, oldVal) => {
                 'rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200',
                 activeCategory === '前端'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-200'
-                  : 'bg-white text-emerald-600 ring-1 ring-emerald-300 hover:bg-emerald-50 hover:ring-emerald-400',
+                  : 'bg-white text-emerald-600 ring-1 ring-emerald-300 hover:bg-emerald-50 hover:ring-emerald-400 dark:bg-gray-800 dark:text-emerald-400 dark:ring-emerald-800 dark:hover:bg-emerald-950 dark:hover:ring-emerald-700',
               ]"
             >
               仅看前端
@@ -249,7 +249,7 @@ watch(searchQuery, (newVal, oldVal) => {
                 'rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200',
                 activeCategory === cat
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                  : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50 hover:ring-gray-300',
+                  : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50 hover:ring-gray-300 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-gray-700 dark:hover:ring-gray-600',
               ]"
             >
               {{ cat }}
@@ -258,10 +258,10 @@ watch(searchQuery, (newVal, oldVal) => {
 
           <!-- 排序 -->
           <div class="flex items-center gap-2">
-            <label class="text-sm text-gray-500">排序：</label>
+            <label class="text-sm text-gray-500 dark:text-gray-400">排序：</label>
             <select
               v-model="sortBy"
-              class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 shadow-sm transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+              class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 shadow-sm transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
             >
               <option value="date">最新发布</option>
               <option value="title">按标题</option>
@@ -271,7 +271,7 @@ watch(searchQuery, (newVal, oldVal) => {
       </div>
 
       <!-- 结果统计 -->
-      <div class="mb-4 text-sm text-gray-500">
+      <div class="mb-4 text-sm text-gray-500 dark:text-gray-400">
         <template v-if="filteredCards.length === 0">
           没有找到匹配的文章
         </template>
@@ -284,9 +284,9 @@ watch(searchQuery, (newVal, oldVal) => {
       <!-- 空状态 -->
       <div
         v-if="filteredCards.length === 0"
-        class="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-white/50 py-20"
+        class="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-white/50 py-20 dark:border-gray-700 dark:bg-gray-800/50"
       >
-        <svg class="mb-4 h-16 w-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="mb-4 h-16 w-16 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -294,8 +294,8 @@ watch(searchQuery, (newVal, oldVal) => {
             d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <p class="text-lg font-medium text-gray-400">暂无匹配内容</p>
-        <p class="mt-1 text-sm text-gray-300">试试其他关键词或分类</p>
+        <p class="text-lg font-medium text-gray-400 dark:text-gray-500">暂无匹配内容</p>
+        <p class="mt-1 text-sm text-gray-300 dark:text-gray-600">试试其他关键词或分类</p>
       </div>
 
       <!-- 卡片网格 -->
@@ -307,10 +307,10 @@ watch(searchQuery, (newVal, oldVal) => {
           v-for="card in filteredCards"
           :key="card.id"
           @click="selectedCard = card"
-          class="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+          class="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 dark:border-gray-700 dark:bg-gray-800 dark:hover:shadow-indigo-500/10"
         >
           <!-- 卡片图片 -->
-          <div class="relative h-40 overflow-hidden bg-gray-100 sm:h-44">
+          <div class="relative h-40 overflow-hidden bg-gray-100 sm:h-44 dark:bg-gray-700">
             <img
               :src="card.image"
               :alt="card.title"
@@ -319,7 +319,7 @@ watch(searchQuery, (newVal, oldVal) => {
             />
             <!-- 分类角标 -->
             <span
-              class="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-0.5 text-xs font-medium text-gray-700 shadow-sm backdrop-blur-sm"
+              class="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-0.5 text-xs font-medium text-gray-700 shadow-sm backdrop-blur-sm dark:bg-gray-800/90 dark:text-gray-300"
             >
               {{ card.category }}
             </span>
@@ -328,12 +328,12 @@ watch(searchQuery, (newVal, oldVal) => {
           <!-- 卡片内容 -->
           <div class="flex flex-1 flex-col p-5">
             <!-- 标题 -->
-            <h3 class="text-base font-semibold leading-snug text-gray-900 transition-colors group-hover:text-indigo-600">
+            <h3 class="text-base font-semibold leading-snug text-gray-900 transition-colors group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400">
               {{ card.title }}
             </h3>
 
             <!-- 描述 -->
-            <p class="mt-2 line-clamp-2 text-sm leading-relaxed text-gray-500">
+            <p class="mt-2 line-clamp-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
               {{ card.description }}
             </p>
 
@@ -342,7 +342,7 @@ watch(searchQuery, (newVal, oldVal) => {
               <span
                 v-for="tag in card.tags"
                 :key="tag"
-                class="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 ring-1 ring-indigo-700/10"
+                class="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 ring-1 ring-indigo-700/10 dark:bg-indigo-900/30 dark:text-indigo-300 dark:ring-indigo-400/20"
               >
                 {{ tag }}
               </span>
@@ -350,7 +350,7 @@ watch(searchQuery, (newVal, oldVal) => {
 
             <!-- 底部信息 -->
             <div class="mt-auto flex items-center justify-between pt-4">
-              <span class="text-xs text-gray-400">{{ card.date }}</span>
+              <span class="text-xs text-gray-400 dark:text-gray-500">{{ card.date }}</span>
               <span
                 class="inline-flex items-center text-xs font-medium text-indigo-500 opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0.5"
               >
