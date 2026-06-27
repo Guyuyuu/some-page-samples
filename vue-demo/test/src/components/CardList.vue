@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 /* ============================================
  * 类型定义
@@ -150,6 +150,16 @@ function setCategory(category: string) {
 function clearSearch() {
   searchQuery.value = ''
 }
+
+/* ============================================
+ * 监听器
+ * ============================================ */
+watch(searchQuery, (newVal, oldVal) => {
+  console.log(
+  `搜索关键词："${oldVal}"→"${newVal}"`,
+  `| 当前匹配${filteredCards.value.length}篇文章`
+  )
+})
 </script>
 
 <template>
