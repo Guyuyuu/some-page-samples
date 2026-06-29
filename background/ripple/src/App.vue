@@ -18,51 +18,67 @@ let time = 0
 const ripples = []
 
 class Ripple {
-  constructor(x, y, type = 'auto') {
+  constructor(x, y, type = 'auto', wavelength = 0) {
     const isBig = type === 'click'
-    const isMedium = type === 'click-sub'
+    const isRain = type === 'rain'
     this.x = x
     this.y = y
-    this.radius = 0
-    this.maxRadius = isBig ? 120 + Math.random() * 80
-      : isMedium ? 45 + Math.random() * 35
-        : 10 + Math.random() * 28
-    this.speed = isBig ? 1.5 + Math.random() * 0.5
-      : isMedium ? 1.0 + Math.random() * 0.4
-        : 0.4 + Math.random() * 0.7
+    this.r = 0
+    this.maxR = isBig ? 130 + Math.random() * 50
+      : isRain ? 25 + Math.random() * 30
+        : 10 + Math.random() * 20
+    this.speed = isBig ? 1.0 + Math.random() * 0.3
+      : isRain ? 0.6 + Math.random() * 0.5
+        : 0.3 + Math.random() * 0.4
     this.opacity = isBig ? 0.6 + Math.random() * 0.1
-      : isMedium ? 0.4 + Math.random() * 0.1
-        : 0.15 + Math.random() * 0.12
-    this.lineWidth = isBig ? 2.0 + Math.random() * 0.5
-      : isMedium ? 1.2 + Math.random() * 0.5
-        : 0.6 + Math.random() * 0.6
+      : isRain ? 0.5 + Math.random() * 0.5
+        : 0.12 + Math.random() * 0.1
     this.type = type
     this.alive = true
-    this.rings = isBig ? 4 : isMedium ? 3 : 1
+    this.wavelength = wavelength || (isBig ? 9 + Math.random() * 3 : (isRain ? 6 + Math.random() * 2 : 3 + Math.random() * 1))
+    this.amplitude = isBig ? 1.0 : (isRain ? 0.8 : 0.5)
   }
 
   update() {
-    this.radius += this.speed
-    this.opacity *= 0.988
-    this.lineWidth *= 0.996
-    if (this.opacity < 0.005 || this.radius > this.maxRadius) {
-      this.alive = false
-    }
+    this.r += this.speed
+    this.speed *= 0.998
+    this.opacity *= 0.985
+    if (this.opacity < 0.005 || this.r > this.maxR) this.alive = false
   }
 
   draw() {
-    if (this.radius <= 0) return
-    for (let i = 0; i < this.rings; i++) {
-      const r = this.radius - i * this.radius * 0.22
-      if (r <= 0) continue
-      const alpha = this.opacity * (1 - i * 0.25)
-      const lw = Math.max(this.lineWidth * (1 - i * 0.2), 0.1)
-      if (alpha < 0.005) continue
+    if (this.r <= 3) return
 
+    const R = Math.floor(this.r)
+    const step = Math.max(3, this.wavelength)
+
+    // 中心暗区
+    if (this.opacity > 0.04) {
       ctx.beginPath()
-      ctx.arc(this.x, this.y, r, 0, Math.PI * 2)
-      ctx.strokeStyle = `rgba(200, 225, 250, ${alpha})`
-      ctx.lineWidth = lw
+      ctx.arc(this.x, this.y, Math.max(R * 0.12, 2), 0, Math.PI * 2)
+      ctx.fillStyle = `rgba(40, 55, 80, ${this.opacity * 0.2})`
+      ctx.fill()
+    }
+
+    // 明暗交替环 — 步长=波长，每次画一对(亮+暗)
+    for (let r = R; r >= step; r -= step) {
+      const crest = r - step * 0.25   // 波峰半径
+      const trough = r - step * 0.75  // 波谷半径
+      const intensity = this.amplitude * this.opacity * (1 - r / this.maxR)
+      if (intensity < 0.005) continue
+
+      // 亮环（波峰）
+      ctx.beginPath()
+      ctx.arc(this.x, this.y, crest, 0, Math.PI * 2)
+      ctx.strokeStyle = `rgba(200, 225, 250, ${intensity * 0.5})`
+      ctx.lineWidth = Math.max(intensity * 1.5, 0.3)
+      ctx.stroke()
+
+      // 暗环（波谷）
+      ctx.beginPath()
+      ctx.arc(this.x, this.y, trough, 0, Math.PI * 2)
+      ctx.strokeStyle = `rgba(50, 70, 100, ${intensity * 0.35})`
+      ctx.lineWidth = Math.max(intensity * 1.0, 0.3)
       ctx.stroke()
     }
   }
@@ -70,7 +86,7 @@ class Ripple {
 
 // ============ 雨滴击水（全屏水面上的溅射点） ============
 const rainImpacts = []
-const RAIN_RATE = 6  // 每帧产生新雨滴数
+const RAIN_RATE = 4  // 每帧产生新雨滴数
 
 class RainImpact {
   constructor() {
@@ -242,15 +258,15 @@ function animate() {
     if (Math.random() < 0.4) {
       const imp = new RainImpact()
       rainImpacts.push(imp)
-      // 入水时产生小涟漪
-      if (Math.random() < 0.12) {
-        ripples.push(new Ripple(imp.x, imp.y, 'auto'))
+      // 入水时产生涟漪
+      if (Math.random() < 0.3) {
+        ripples.push(new Ripple(imp.x, imp.y, 'rain'))
       }
     }
   }
 
-  // 随机自然涟漪（全屏分布，但密度均匀）
-  if (ripples.filter(r => r.type === 'auto').length < 60 && Math.random() < 0.015) {
+  // 随机自然涟漪（全屏自然分布）
+  if (ripples.filter(r => r.type === 'auto').length < 25 && ripples.length < 50 && Math.random() < 0.008) {
     ripples.push(new Ripple(
       Math.random() * W,
       Math.random() * H,
@@ -267,21 +283,8 @@ function handleClick(e) {
   const x = e.clientX - rect.left
   const y = e.clientY - rect.top
 
-  // 主涟漪
+  // 点击涟漪
   ripples.push(new Ripple(x, y, 'click'))
-
-  // 外围子涟漪 - 分两圈
-  for (let i = 0; i < 8; i++) {
-    const angle = (i / 8) * Math.PI * 2 + Math.random() * 0.3
-    const dist = 20 + Math.random() * 50
-    setTimeout(() => {
-      ripples.push(new Ripple(
-        x + Math.cos(angle) * dist,
-        y + Math.sin(angle) * dist * 0.7,
-        'click-sub'
-      ))
-    }, 100 + i * 60)
-  }
 }
 
 function handleMouseMove(e) {
@@ -300,7 +303,7 @@ function init() {
   resize()
   for (let i = 0; i < CAUSTIC_COUNT; i++) caustics.push(new Caustic())
   // 预填充一些涟漪
-  for (let i = 0; i < 15; i++) {
+  for (let i = 0; i < 4; i++) {
     ripples.push(new Ripple(Math.random() * W, Math.random() * H, 'auto'))
   }
 }
