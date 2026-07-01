@@ -8,28 +8,53 @@ let skyFlash = 0        // 瞬时闪白（快亮快灭）
 let ambientGlow = 0     // 环境余晖（云幕照明，缓慢衰减）
 let cloudCurtain = null
 
-// ─── 分形闪电：中点位移算法 ───
+// ─── 分形闪电树：中点位移 + 分支向四周扩散 ───
 
-function generatePoints(x1, y1, x2, y2, displace, branchChance) {
+function generateBoltTree(x1, y1, x2, y2, displace, branchChance, level) {
   const pts = []
   if (displace < 2) {
     pts.push({ x: x2, y: y2 })
-    return pts
+    return { startX: x1, startY: y1, points: pts, children: [], level }
   }
 
   const midX = (x1 + x2) / 2 + (Math.random() - 0.5) * displace
   const midY = (y1 + y2) / 2 + (Math.random() - 0.5) * displace
 
-  pts.push(...generatePoints(x1, y1, midX, midY, displace * 0.6, branchChance))
-  pts.push(...generatePoints(midX, midY, x2, y2, displace * 0.6, branchChance))
+  const left  = generateBoltTree(x1, y1, midX, midY, displace * 0.6, branchChance, level)
+  const right = generateBoltTree(midX, midY, x2, y2, displace * 0.6, branchChance, level)
 
-  if (Math.random() < branchChance && displace > 10) {
-    const bx = midX + (Math.random() - 0.5) * displace * 1.5
-    const by = midY + (Math.random() + 0.5) * displace * 1.5
-    pts.push(...generatePoints(midX, midY, bx, by, displace * 0.5, branchChance * 0.6))
+  // 主干路径 = 左半段 + 右半段
+  const points = [...left.points, ...right.points]
+  const children = [...left.children, ...right.children]
+
+  // ── 分支：从当前中点向两侧横向劈开 ──
+  if (level < 2 && Math.random() < branchChance && displace > 10) {
+    // 1. 矢量方向：从中点指向主闪电最终落点
+    const dx = x2 - midX
+    const dy = y2 - midY
+    const len = Math.sqrt(dx * dx + dy * dy)
+    if (len > 0) {
+      const ax = dx / len   // 轴向单位向量（向下劈击大方向）
+      const ay = dy / len
+
+      // 2. 垂直法向量（与主方向成 45° 度），实现向两侧散开
+      const px = -ay * 0.45 // 垂直分量，随机偏移量 0.0~0.45
+      const py =  ax * 0.2 // 横向分量
+      const side = Math.random() < 0.5 ? 1 : -1   // +1 向右 / -1 向左
+
+      // 3. 分支终点 = 中点 + 轴向分量(衰减) + 垂直分量(随机偏移)
+      const axialDecay  = 2.5 + Math.random() * 1.5   // 向下延展 2.5~4.0
+      const lateralRand = 5.0 + Math.random() * 10.0   // 横向偏移量是主干的 5 倍，随机偏移量 0.0~10.0
+
+      const bx = midX + ax * displace * axialDecay + px * side * displace * lateralRand
+      const by = midY + ay * displace * axialDecay + py * side * displace * lateralRand
+
+      const branch = generateBoltTree(midX, midY, bx, by, displace * 0.5, branchChance * 0.5, Math.min(level + 1, 2))
+      children.push(branch)
+    }
   }
 
-  return pts
+  return { startX: x1, startY: y1, points, children, level }
 }
 
 function createBolt(width, height) {
@@ -38,21 +63,67 @@ function createBolt(width, height) {
   const endX = width * (0.2 + Math.random() * 0.6)
   const endY = height * (0.6 + Math.random() * 0.25)
 
-  const points = generatePoints(startX, startY, endX, endY, 80, 0.35)
+  const tree = generateBoltTree(startX, startY, endX, endY, 80, 0.4, 0)
 
   return {
-    startX, startY,
-    points,
+    tree,
     life: 0,
-    maxLife: 36 + Math.random() * 24, // 闪电持续时间
-    flashStrength: 0.2 + Math.random() * 0.8 // 闪电亮度，范围0.2-1.0
+    maxLife: 36 + Math.random() * 24,
+    flashStrength: 0.2 + Math.random() * 0.8
   }
 }
 
-// ─── 绘制单帧闪电 ───
+// ─── 递归绘制闪电树（按层级控制线宽和外发光） ───
+
+function drawBoltTree(ctx, node, alpha) {
+  const { startX, startY, points, children, level } = node
+  if (!points || points.length < 1) return
+
+  // 由粗到细的线宽：主干 3~4px → 一级分支 1.5~2px → 二级分支 0.5~1px
+  const isMain   = level === 0
+  const isBranch = level === 1
+  const mainWidth = isMain ? 3.5 : isBranch ? 1.8 : 0.8
+  const glowWidth = isMain ? 14  : isBranch ? 8   : 4
+  const glowScale = isMain ? 1.0 : isBranch ? 0.7 : 0.5
+
+  // ── 外发光层 ──
+  ctx.save()
+  ctx.globalAlpha    = alpha * 0.3 * glowScale
+  ctx.shadowColor    = '#8aaaff'
+  ctx.shadowBlur     = glowWidth
+  ctx.strokeStyle    = '#b8c8ff'
+  ctx.lineWidth      = mainWidth * 3.5
+  ctx.lineCap        = 'round'
+  ctx.lineJoin       = 'round'
+  ctx.beginPath()
+  ctx.moveTo(startX, startY)
+  points.forEach(p => ctx.lineTo(p.x, p.y))
+  ctx.stroke()
+  ctx.restore()
+
+  // ── 核心白色层 ──
+  ctx.save()
+  ctx.globalAlpha    = alpha * glowScale
+  ctx.shadowColor    = '#ffffff'
+  ctx.shadowBlur     = 4
+  ctx.strokeStyle    = '#ffffff'
+  ctx.lineWidth      = mainWidth
+  ctx.lineCap        = 'round'
+  ctx.lineJoin       = 'round'
+  ctx.beginPath()
+  ctx.moveTo(startX, startY)
+  points.forEach(p => ctx.lineTo(p.x, p.y))
+  ctx.stroke()
+  ctx.restore()
+
+  // 递归绘制子分支
+  for (const child of children) {
+    drawBoltTree(ctx, child, alpha)
+  }
+}
 
 function drawBolt(ctx, bolt) {
-  const { startX, startY, points, life, maxLife, flashStrength } = bolt
+  const { tree, life, maxLife, flashStrength } = bolt
   const t = Math.min(life / maxLife, 1)
 
   const opacity = t < 0.12
@@ -63,33 +134,7 @@ function drawBolt(ctx, bolt) {
 
   const alpha = opacity * flashStrength
 
-  ctx.save()
-  ctx.globalAlpha = alpha * 0.3
-  ctx.shadowColor = '#8aaaff'
-  ctx.shadowBlur = 40
-  ctx.strokeStyle = '#b8c8ff'
-  ctx.lineWidth = 12
-  ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
-  ctx.beginPath()
-  ctx.moveTo(startX, startY)
-  points.forEach(p => ctx.lineTo(p.x, p.y))
-  ctx.stroke()
-  ctx.restore()
-
-  ctx.save()
-  ctx.globalAlpha = alpha
-  ctx.shadowColor = '#ffffff'
-  ctx.shadowBlur = 10
-  ctx.strokeStyle = '#ffffff'
-  ctx.lineWidth = 2.5
-  ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
-  ctx.beginPath()
-  ctx.moveTo(startX, startY)
-  points.forEach(p => ctx.lineTo(p.x, p.y))
-  ctx.stroke()
-  ctx.restore()
+  drawBoltTree(ctx, tree, alpha)
 }
 
 // ─── 生成厚重云幕纹理 ───
