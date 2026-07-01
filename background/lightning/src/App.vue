@@ -5,6 +5,7 @@ const canvasRef = ref(null)
 let animId = null
 let activeBolts = []
 let skyFlash = 0
+let cloudCurtain = null            // 离线画布：厚重云幕纹理
 
 // ─── 分形闪电：中点位移算法 ───
 
@@ -42,8 +43,8 @@ function createBolt(width, height) {
     startX, startY,
     points,
     life: 0,
-    maxLife: 50 + Math.random() * 6,      // 12~18 帧 ≈ 0.2~0.3 秒
-    flashStrength: 0.5 + Math.random() * 0.5
+    maxLife: 36 + Math.random() * 24, // 闪电持续时间
+    flashStrength: 0.2 + Math.random() * 0.8 // 闪电亮度，范围 [0.1, 1.0]
   }
 }
 
@@ -51,23 +52,24 @@ function createBolt(width, height) {
 
 function drawBolt(ctx, bolt) {
   const { startX, startY, points, life, maxLife, flashStrength } = bolt
-  const t = life / maxLife            // 0→1
+  const t = Math.min(life / maxLife, 1)
+  
+  const opacity = t < 0.12
+    ? Math.pow(t / 0.12, 1.5)
+    : Math.pow(Math.max(0, 1 - (t - 0.12) / 0.88), 2.0)
 
-  // 极快亮起，指数衰减
-  const opacity = t < 0.1
-    ? t / 0.1
-    : Math.pow(1 - (t - 0.1) / 0.85, 1.8)
+  if (opacity < 0.005) return
 
-  if (opacity < 0.01) return
+  const alpha = opacity * flashStrength
 
- // 辉光层
+  // 辉光层
   ctx.save()
-  ctx.globalAlpha = opacity * 0.35 * flashStrength // 辉光层透明度
+  ctx.globalAlpha = alpha * 0.3
   ctx.shadowColor = '#8aaaff'
-  ctx.shadowBlur = 5 // 辉光层模糊度
+  ctx.shadowBlur = 40
   ctx.strokeStyle = '#b8c8ff'
-  ctx.lineWidth = 5 // 辉光层线宽
-  ctx.lineCap = 'round'   
+  ctx.lineWidth = 12
+  ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
   ctx.beginPath()
   ctx.moveTo(startX, startY)
@@ -77,9 +79,9 @@ function drawBolt(ctx, bolt) {
 
   // 核心亮白层
   ctx.save()
-  ctx.globalAlpha = opacity * flashStrength
+  ctx.globalAlpha = alpha
   ctx.shadowColor = '#ffffff'
-  ctx.shadowBlur = 12
+  ctx.shadowBlur = 10
   ctx.strokeStyle = '#ffffff'
   ctx.lineWidth = 2.5
   ctx.lineCap = 'round'
@@ -91,69 +93,171 @@ function drawBolt(ctx, bolt) {
   ctx.restore()
 }
 
-// ─── 绘制背景（渐变天空 + 星星） ───
+// ─── 生成厚重云幕纹理 ───
+// 模拟高层风暴云（卷层云 / 积雨云底）的"固态幕布"质感：
+// 厚重模糊的磨砂玻璃状云层，没有清晰边缘，只有横向拉扯的丝絮暗纹
 
-const stars = []
+function buildCloudCurtain(w, h) {
+  // 临时画布：绘制原始形状
+  const temp = document.createElement('canvas')
+  temp.width = w
+  temp.height = h
+  const tc = temp.getContext('2d')
 
-function initStars(width, height) {
-  stars.length = 0
-  for (let i = 0; i < 60; i++) {
-    stars.push({
-      x: Math.random() * width,
-      y: Math.random() * height * 0.45,
-      size: 0.5 + Math.random() * 1,
-      phase: Math.random() * Math.PI * 2,
-      alpha: 0.2 + Math.random() * 0.5
-    })
+  // 基底填充 — 接近全黑
+  tc.fillStyle = '#040208'
+  tc.fillRect(0, 0, w, h)
+
+  // 第1层：大面积横向暗色带（云幕主体，磨砂玻璃质感）
+  for (let i = 0; i < 80; i++) {
+    const y = (i / 80) * h * 0.9 + (Math.random() - 0.5) * h * 0.06
+    const bandH = h * (0.04 + Math.random() * 0.08)
+    const alpha = 0.015 + Math.random() * 0.04
+    const palette = ['#12082a', '#0e0620', '#1a0e30', '#0c0a20', '#160c2e']
+    const color = palette[i % palette.length]
+
+    tc.save()
+    tc.globalAlpha = alpha
+    tc.fillStyle = color
+
+    const topY = y - bandH / 2
+    const botY = y + bandH / 2
+    tc.beginPath()
+    for (let x = 0; x <= w; x += 3) {
+      const wave = Math.sin(x * 0.008 + i * 1.3) * 4 + Math.sin(x * 0.025 + i * 0.7) * 2
+      if (x === 0) tc.moveTo(x, topY + wave)
+      else tc.lineTo(x, topY + wave)
+    }
+    for (let x = w; x >= 0; x -= 3) {
+      const wave = Math.sin(x * 0.008 + i * 1.3 + 2) * 4 + Math.sin(x * 0.025 + i * 0.7 + 1) * 2
+      tc.lineTo(x, botY + wave)
+    }
+    tc.closePath()
+    tc.fill()
+    tc.restore()
   }
+
+  // 第2层：横向撕扯状丝絮暗纹（强气流痕迹）
+  for (let i = 0; i < 150; i++) {
+    const y = Math.random() * h * 0.8
+    const startX = Math.random() * w * 0.15
+    const len = w * (0.4 + Math.random() * 0.6)
+    const alpha = 0.008 + Math.random() * 0.025
+
+    tc.save()
+    tc.globalAlpha = alpha
+    tc.strokeStyle = '#1a0e30'
+    tc.lineWidth = 2 + Math.random() * 5
+    tc.lineCap = 'round'
+
+    const segs = 8 + Math.floor(Math.random() * 12)
+    const segLen = len / segs
+    let cx = startX, cy = y
+    tc.beginPath()
+    tc.moveTo(cx, cy)
+    for (let s = 0; s < segs; s++) {
+      cx += segLen
+      cy += (Math.random() - 0.5) * 1.2
+      tc.lineTo(cx, cy)
+    }
+    tc.stroke()
+    tc.restore()
+  }
+
+  // 第3层：云幕底部参差不齐的下沿（乌云压顶的压迫感）
+  tc.save()
+  tc.fillStyle = '#06020e'
+  const baseY = h * 0.72
+  tc.beginPath()
+  tc.moveTo(0, h)
+  for (let x = 0; x <= w; x += 3) {
+    const wave = Math.sin(x * 0.012 + 1) * 12
+               + Math.sin(x * 0.035 + 3) * 5
+               + Math.sin(x * 0.006 + 7) * 18
+    tc.lineTo(x, baseY + wave)
+  }
+  tc.lineTo(w, h)
+  tc.closePath()
+  tc.fill()
+  tc.restore()
+
+  // 高斯模糊：实现磨砂玻璃般的融合效果
+  const off = document.createElement('canvas')
+  off.width = w
+  off.height = h
+  const oc = off.getContext('2d')
+  oc.filter = 'blur(18px)'
+  oc.drawImage(temp, 0, 0)
+  oc.filter = 'none'
+
+  return off
 }
 
-function drawSky(ctx, width, height, now) {
-  // 紫色到深蓝色渐变（暗化）
+// ─── 绘制背景 ───
+
+function drawSky(ctx, width, height) {
+  // ── 垂直线性渐变 ──
+  // 顶部：极度深邃的暗夜紫（黑洞般）
+  // 中部：灰紫罗兰 / 暗灰蓝（冷色调）
+  // 底部：死寂炭黑色
   const grad = ctx.createLinearGradient(0, 0, 0, height)
-  grad.addColorStop(0,    '#1a0a2e')
-  grad.addColorStop(0.25, '#2d1b4e')
-  grad.addColorStop(0.45, '#3d2a6b')
-  grad.addColorStop(0.60, '#2a1f5c')
-  grad.addColorStop(0.80, '#151040')
-  grad.addColorStop(1,    '#0c0720')
+  grad.addColorStop(0,    '#080216')
+  grad.addColorStop(0.10, '#0e0622')
+  grad.addColorStop(0.25, '#1a0e32')
+  grad.addColorStop(0.40, '#281a3e')
+  grad.addColorStop(0.55, '#221838')
+  grad.addColorStop(0.70, '#14102a')
+  grad.addColorStop(0.85, '#0a0818')
+  grad.addColorStop(1,    '#040208')
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, width, height)
 
-  // 星星
-  for (const s of stars) {
-    const twinkle = 0.4 + 0.6 * Math.sin(now / 2000 + s.phase)
+  // ── 厚重云幕纹理 ──
+  // 平常几乎不可见（alpha 极低），闪电照亮时纹理瞬间浮现
+  if (cloudCurtain) {
+    const flashIntensity = skyFlash > 0.01 ? skyFlash : 0
+    // 基础可见度极低，闪电时飙高
+    const baseAlpha = 0.04
+    const boost = flashIntensity > 0
+      ? 1 + flashIntensity * 4.0
+      : 0
+    const alpha = Math.min(baseAlpha + boost * 0.18, 0.6)
+
     ctx.save()
-    ctx.globalAlpha = s.alpha * twinkle
-    ctx.fillStyle = '#ffffff'
-    ctx.beginPath()
-    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2)
-    ctx.fill()
+    ctx.globalAlpha = alpha
+    ctx.drawImage(cloudCurtain, 0, 0)
     ctx.restore()
   }
 
-  // 天空泛白闪烁（闪电照亮夜空）
+  // ── 闪电闪白（冷蓝白瞬时照亮） ──
   if (skyFlash > 0.01) {
+    // 第一层：漫射光（照亮云层）
     ctx.save()
-    ctx.fillStyle = `rgba(160, 175, 255, ${skyFlash * 0.12})`
+    ctx.fillStyle = `rgba(160, 175, 255, ${skyFlash * 0.08})`
     ctx.fillRect(0, 0, width, height)
     ctx.restore()
+
+    // 第二层：云幕被照亮的冷光
+    ctx.save()
+    ctx.fillStyle = `rgba(200, 210, 255, ${skyFlash * 0.03})`
+    ctx.fillRect(0, 0, width, height)
+    ctx.restore()
+
     skyFlash *= 0.82
   }
 }
 
 // ─── 动画循环 ───
 
-function animate(now) {
+function animate() {
   const canvas = canvasRef.value
   if (!canvas) return
   const ctx = canvas.getContext('2d')
   const w = canvas.width
   const h = canvas.height
+  
+  drawSky(ctx, w, h)
 
-  drawSky(ctx, w, h, now)
-
-  // 更新 & 绘制闪电
   activeBolts = activeBolts.filter(b => {
     b.life++
     if (b.life > b.maxLife) return false
@@ -166,24 +270,25 @@ function animate(now) {
 
 // ─── 闪电调度 ───
 
-function spawnBolt() {
+function spawnBolt(triggerFlash = true) {
   const canvas = canvasRef.value
   if (!canvas) return
   const b = createBolt(canvas.width, canvas.height)
   activeBolts.push(b)
-  skyFlash = b.flashStrength            // 触发天空闪烁
+  if (triggerFlash) skyFlash = b.flashStrength
 }
 
 let spawnTimer = null
 
 function schedule() {
-  const delay = 2000 + Math.random() * 5000    // 2~7 秒
+  const delay = 1000 + Math.random() * 1000 // 闪电间隔
   spawnTimer = setTimeout(() => {
     if (!canvasRef.value) return
-    // 偶尔一次多道闪电
-    const count = Math.random() < 0.25 ? 2 + Math.floor(Math.random() * 2) : 1
-    for (let i = 0; i < count; i++) {
-      setTimeout(spawnBolt, i * (60 + Math.random() * 80))
+
+    const count = Math.random() < 0.25 ? 2 + Math.floor(Math.random() * 2) : 1 
+    spawnBolt(true) 
+    for (let i = 1; i < count; i++) {
+      setTimeout(() => spawnBolt(false), i * (60 + Math.random() * 80))
     }
     schedule()
   }, delay)
@@ -198,17 +303,15 @@ onMounted(() => {
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
 
-  initStars(canvas.width, canvas.height)
+  cloudCurtain = buildCloudCurtain(canvas.width, canvas.height)
   animId = requestAnimationFrame(animate)
   schedule()
-
-  // 首道闪电快速出场
-  setTimeout(spawnBolt, 400)
+  setTimeout(() => spawnBolt(true), 400) 
 
   const onResize = () => {
     canvas.width = window.innerWidth
     canvas.height = window.innerHeight
-    initStars(canvas.width, canvas.height)
+    cloudCurtain = buildCloudCurtain(canvas.width, canvas.height)
   }
   window.addEventListener('resize', onResize)
 
@@ -217,6 +320,7 @@ onMounted(() => {
     if (animId) cancelAnimationFrame(animId)
     if (spawnTimer) clearTimeout(spawnTimer)
     activeBolts = []
+    cloudCurtain = null
   })
 })
 </script>
@@ -236,7 +340,7 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #0c0720;
+  background: #040208;
 }
 
 #app {
