@@ -1,0 +1,553 @@
+/* ===== 全局重置 ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #0a0a0f;
+  font-family: 'Segoe UI', 'PingFang SC', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+.wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ============================================================
+   火焰粒子层
+   ============================================================ */
+.flame-particles {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 240px;
+  height: 0;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ===== 粒子集 #1（黄色 / 橙色小火花） ===== */
+.flame-particles::before {
+  content: '';
+  position: absolute;
+  /* 每个粒子初始是一个小圆点 */
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #ffd700;
+  /* 通过 box-shadow 批量生成 30+ 个粒子，颜色随机橘/黄/白 */
+  box-shadow:
+    /* ——— 第一排（底） ——— */
+    10px 0 #ff6a00,
+    30px 0 #ffd700,
+    50px 0 #ff4500,
+    70px 0 #ffaa00,
+    90px 0 #ff8c00,
+    110px 0 #ffd700,
+    130px 0 #ff4500,
+    150px 0 #ffaa00,
+    170px 0 #ff6a00,
+    190px 0 #ffd700,
+    210px 0 #ff8c00,
+    230px 0 #ff4500,
+    /* ——— 第二排（稍高） ——— */
+    20px -15px #ffaa00,
+    40px -18px #ffd700,
+    60px -12px #ff6a00,
+    80px -20px #ff4500,
+    100px -14px #ffd700,
+    120px -16px #ffaa00,
+    140px -10px #ff8c00,
+    160px -22px #ffd700,
+    180px -13px #ff4500,
+    200px -17px #ffaa00,
+    220px -15px #ffd700,
+    /* ——— 第三排（更高） ——— */
+    15px -30px #ff8c00,
+    35px -35px #ffd700,
+    55px -28px #ffaa00,
+    75px -38px #ff4500,
+    95px -32px #ffd700,
+    115px -36px #ff6a00,
+    135px -25px #ffd700,
+    155px -40px #ffaa00,
+    175px -33px #ff4500,
+    195px -29px #ffd700,
+    215px -37px #ff8c00,
+    /* ——— 第四排（零星高飞） ——— */
+    25px -55px #ffd700,
+    65px -60px #ffaa00,
+    105px -50px #ff4500,
+    145px -58px #ffd700,
+    185px -52px #ff8c00;
+  animation: spark-rise-1 2.2s linear infinite;
+}
+
+/* ===== 粒子集 #2（红色 / 暗橙色大颗火星，延时启动） ===== */
+.flame-particles::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ff4500;
+  box-shadow:
+    /* ——— 第一排 ——— */
+    5px 0 #ff2200,
+    25px 0 #ff6a00,
+    45px 0 #cc3300,
+    65px 0 #ff4500,
+    85px 0 #ff3300,
+    105px 0 #ff6a00,
+    125px 0 #cc2200,
+    145px 0 #ff4500,
+    165px 0 #ff5500,
+    185px 0 #cc3300,
+    205px 0 #ff6a00,
+    225px 0 #ff2200,
+    /* ——— 第二排 ——— */
+    15px -20px #ff4500,
+    35px -25px #cc2200,
+    55px -18px #ff5500,
+    75px -28px #ff3300,
+    95px -22px #ff6a00,
+    115px -30px #cc3300,
+    135px -16px #ff4500,
+    155px -24px #ff2200,
+    175px -20px #ff5500,
+    195px -26px #cc3300,
+    215px -22px #ff4500,
+    /* ——— 第三排 ——— */
+    10px -45px #ff3300,
+    50px -50px #cc3300,
+    90px -42px #ff4500,
+    130px -48px #ff2200,
+    170px -44px #cc2200,
+    210px -50px #ff5500;
+  animation: spark-rise-2 2.8s linear infinite;
+}
+
+/* ===== 粒子上升动画（组1：快） ===== */
+@keyframes spark-rise-1 {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-120px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+/* ===== 粒子上升动画（组2：慢） ===== */
+@keyframes spark-rise-2 {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  60% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-150px) scale(0.2);
+    opacity: 0;
+  }
+}
+
+/* ============================================================
+   火焰按钮 —— 核心
+   ============================================================ */
+.fire-btn {
+  position: relative;
+  padding: 22px 64px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #fff;
+  cursor: pointer;
+  outline: none;
+  border: none;
+  border-radius: 16px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  will-change: transform;
+
+  /* ── 燃烧渐变背景 ── */
+  /* 从中心向外扩散的火焰色调：炽白 → 金黄 → 橙 → 暗红 */
+  background:
+    /* 内部炽热核心：亮黄白过渡到橙 */
+    radial-gradient(
+      ellipse at 40% 40%,
+      #fff7e0 0%,
+      #ffd700 15%,
+      #ff8c00 35%,
+      #ff4500 55%,
+      #cc2200 75%,
+      #8b0000 100%
+    ),
+    /* 第二层渐变使颜色更丰富 */
+    linear-gradient(
+      145deg,
+      #ffd700 0%,
+      #ff4500 30%,
+      #8b0000 60%,
+      #3a0000 100%
+    );
+  background-blend-mode: overlay, normal;
+  background-size: 200% 200%;
+  background-position: 0% 0%;
+
+  /* ── 多层发光阴影 ── */
+  box-shadow:
+    /* 内层燃烧光晕 */
+    0 0 20px rgba(255, 69, 0, 0.6),
+    0 0 40px rgba(255, 140, 0, 0.4),
+    0 0 80px rgba(255, 200, 0, 0.15),
+    /* 外发光 */
+    0 0 120px rgba(255, 69, 0, 0.20),
+    0 0 200px rgba(255, 140, 0, 0.08),
+    /* 边缘内发光 */
+    inset 0 2px 0 rgba(255, 255, 255, 0.30),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+    /* 基础阴影 */
+    0 8px 32px rgba(0, 0, 0, 0.50);
+
+  /* ── 火焰闪烁动画 ── */
+  animation: fire-flicker 3s ease-in-out infinite alternate;
+
+  /* ── 过渡 ── */
+  transition:
+    transform 0.30s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.30s ease,
+    color 0.25s ease;
+}
+
+/* ===== 火焰闪烁（背景渐变流动） ===== */
+@keyframes fire-flicker {
+  0% {
+    background-position: 0% 0%;
+    filter: brightness(1);
+  }
+  25% {
+    background-position: 40% 30%;
+    filter: brightness(1.06);
+  }
+  50% {
+    background-position: 20% 60%;
+    filter: brightness(0.98);
+  }
+  75% {
+    background-position: 60% 20%;
+    filter: brightness(1.04);
+  }
+  100% {
+    background-position: 30% 50%;
+    filter: brightness(1);
+  }
+}
+
+/* ============================================================
+   外圈火焰环（燃烧的边框）
+   ============================================================ */
+.fire-btn::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 20px;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    rgba(255, 69, 0, 0.25) 30deg,
+    rgba(255, 140, 0, 0.50) 60deg,
+    rgba(255, 215, 0, 0.35) 90deg,
+    transparent 120deg,
+    rgba(255, 69, 0, 0.20) 150deg,
+    rgba(255, 100, 0, 0.45) 180deg,
+    rgba(255, 180, 0, 0.30) 210deg,
+    transparent 240deg,
+    rgba(255, 69, 0, 0.25) 270deg,
+    rgba(255, 140, 0, 0.50) 300deg,
+    rgba(255, 215, 0, 0.35) 330deg,
+    transparent 360deg
+  );
+  animation: flame-ring 2.5s linear infinite;
+  z-index: -1;
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+/* ===== 外圈火焰旋转动画 ===== */
+@keyframes flame-ring {
+  0% {
+    transform: rotate(0deg);
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(360deg);
+    opacity: 0.7;
+  }
+}
+
+/* ============================================================
+   底部火焰舌
+   ============================================================ */
+.fire-btn::after {
+  content: '';
+  position: absolute;
+  bottom: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 75%;
+  height: 48px;
+  background:
+    radial-gradient(ellipse 50% 100% at 15% 0%,
+      rgba(255, 69, 0, 0.50) 0%, transparent 100%),
+    radial-gradient(ellipse 50% 100% at 35% 0%,
+      rgba(255, 140, 0, 0.45) 0%, transparent 100%),
+    radial-gradient(ellipse 50% 100% at 50% 0%,
+      rgba(255, 200, 0, 0.35) 0%, transparent 100%),
+    radial-gradient(ellipse 50% 100% at 65% 0%,
+      rgba(255, 140, 0, 0.45) 0%, transparent 100%),
+    radial-gradient(ellipse 50% 100% at 85% 0%,
+      rgba(255, 69, 0, 0.50) 0%, transparent 100%);
+  filter: blur(10px);
+  animation: flame-lick 1.6s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+/* ===== 火焰舌摆动动画 ===== */
+@keyframes flame-lick {
+  0% {
+    transform: translateX(-50%) scaleY(0.7);
+    opacity: 0.6;
+    filter: blur(12px);
+  }
+  30% {
+    transform: translateX(-45%) scaleY(1.1);
+    opacity: 0.9;
+    filter: blur(8px);
+  }
+  60% {
+    transform: translateX(-55%) scaleY(0.9);
+    opacity: 0.8;
+    filter: blur(10px);
+  }
+  100% {
+    transform: translateX(-50%) scaleY(1.0);
+    opacity: 0.7;
+    filter: blur(9px);
+  }
+}
+
+/* ============================================================
+   按钮上方火焰顶
+   ============================================================ */
+.fire-btn .btn-text {
+  position: relative;
+  z-index: 1;
+  text-shadow:
+    0 0 10px rgba(255, 200, 0, 0.6),
+    0 0 20px rgba(255, 100, 0, 0.4),
+    0 0 40px rgba(255, 69, 0, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.50);
+  display: inline-block;
+}
+
+/* ===== 文字上方火焰尖 ===== */
+.fire-btn .btn-text::before {
+  content: '🔥';
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 20px;
+  opacity: 0;
+  filter: blur(0);
+  animation: top-flame 2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes top-flame {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(0) scale(0.8);
+  }
+  30% {
+    opacity: 0.9;
+    transform: translateX(-50%) translateY(-4px) scale(1.1);
+  }
+  70% {
+    opacity: 0.6;
+    transform: translateX(-50%) translateY(2px) scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px) scale(1.0);
+  }
+}
+
+/* ============================================================
+   Hover —— 烈焰升腾
+   ============================================================ */
+.fire-btn:hover {
+  transform: translateY(-4px) scale(1.04);
+  color: #fffbe6;
+  box-shadow:
+    0 0 30px rgba(255, 69, 0, 0.8),
+    0 0 60px rgba(255, 140, 0, 0.5),
+    0 0 100px rgba(255, 200, 0, 0.25),
+    0 0 160px rgba(255, 69, 0, 0.30),
+    0 0 280px rgba(255, 140, 0, 0.12),
+    inset 0 2px 0 rgba(255, 255, 255, 0.40),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.20),
+    0 12px 40px rgba(0, 0, 0, 0.55);
+  animation-duration: 1.5s;
+  /* 加快闪烁 */
+}
+
+.fire-btn:hover::before {
+  animation-duration: 1.8s;
+  filter: blur(8px);
+  opacity: 1;
+}
+
+.fire-btn:hover::after {
+  animation-duration: 0.8s;
+  height: 60px;
+  bottom: -44px;
+  filter: blur(8px);
+}
+
+.fire-btn:hover .btn-text::before {
+  animation-duration: 1.2s;
+  content: '🔥';
+  font-size: 24px;
+}
+
+/* ===== Hover 时粒子加快 ===== */
+.fire-btn:hover ~ .flame-particles::before {
+  animation-duration: 1.2s;
+}
+
+.fire-btn:hover ~ .flame-particles::after {
+  animation-duration: 1.8s;
+}
+
+/* ============================================================
+   Active —— 按下
+   ============================================================ */
+.fire-btn:active {
+  transform: translateY(1px) scale(0.96);
+  color: rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 0 20px rgba(255, 69, 0, 0.5),
+    0 0 40px rgba(255, 140, 0, 0.3),
+    0 0 60px rgba(255, 200, 0, 0.1),
+    inset 0 3px 8px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 2px 8px rgba(0, 0, 0, 0.40);
+  filter: brightness(0.92);
+  transition:
+    transform 0.08s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.08s ease,
+    color 0.08s ease,
+    filter 0.08s ease;
+}
+
+/* ============================================================
+   焦点指示器（键盘导航无障碍）
+   ============================================================ */
+.fire-btn:focus-visible {
+  outline: 2px solid rgba(255, 180, 50, 0.85);
+  outline-offset: 6px;
+  box-shadow:
+    0 0 0 4px rgba(255, 100, 0, 0.25),
+    0 0 30px rgba(255, 69, 0, 0.6),
+    0 0 60px rgba(255, 140, 0, 0.4),
+    inset 0 2px 0 rgba(255, 255, 255, 0.30);
+}
+
+/* ============================================================
+   禁用状态
+   ============================================================ */
+.fire-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none !important;
+  filter: grayscale(0.8) brightness(0.5) !important;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.40) !important;
+}
+
+.fire-btn:disabled::before,
+.fire-btn:disabled::after,
+.fire-btn:disabled .btn-text::before,
+.fire-btn:disabled ~ .flame-particles {
+  opacity: 0 !important;
+  animation: none !important;
+}
+
+/* ============================================================
+   减少动效偏好
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .fire-btn,
+  .fire-btn::before,
+  .fire-btn::after,
+  .fire-btn .btn-text::before,
+  .flame-particles::before,
+  .flame-particles::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .fire-btn {
+    filter: none !important;
+    background: linear-gradient(135deg, #ff4500, #cc2200, #8b0000);
+  }
+
+  .fire-btn:hover {
+    transform: none !important;
+  }
+
+  .fire-btn:active {
+    transform: none !important;
+    filter: none !important;
+  }
+
+  .fire-btn::after {
+    opacity: 0 !important;
+  }
+
+  .fire-btn::before {
+    opacity: 0.4 !important;
+    filter: blur(4px) !important;
+  }
+
+  .fire-btn .btn-text::before {
+    opacity: 0 !important;
+  }
+}
