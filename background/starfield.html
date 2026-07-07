@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 星空</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+
+        #starCanvas {
+            position: fixed;
+            inset: 0;
+            display: block;
+            z-index: 0;
+        }
+
+        /* ── 前景信息面板 ── */
+        .overlay {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            color: rgba(255,255,255,0.85);
+            pointer-events: none;
+            user-select: none;
+        }
+        .overlay h1 {
+            font-size: clamp(2rem, 6vw, 4.5rem);
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            text-shadow: 0 0 40px rgba(120,180,255,0.3), 0 0 80px rgba(120,180,255,0.1);
+        }
+        .overlay p {
+            margin-top: 1rem;
+            font-size: clamp(0.85rem, 2vw, 1.15rem);
+            letter-spacing: 0.3em;
+            opacity: 0.6;
+            font-weight: 300;
+        }
+
+        /* ── 操作提示 ── */
+        .hint {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+            color: rgba(255,255,255,0.25);
+            font-size: 0.8rem;
+            letter-spacing: 0.15em;
+            pointer-events: none;
+            transition: opacity 1.5s;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="starCanvas"></canvas>
+
+    <div class="overlay">
+        <h1>星辰</h1>
+        <p>移动鼠标 · 漫游星海</p>
+    </div>
+
+    <div class="hint" id="hint">✦ 拖动视角 · 滚轮变速</div>
+
+    <script>
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  3D 星空背景 — Canvas 实现
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        const canvas = document.getElementById('starCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let W, H, cx, cy;
+
+        // ── 配置 ──
+        const CONFIG = {
+            starCount: 1600,          // 恒星数量
+            depth: 1200,              // Z 轴范围
+            fov: 400,                 // 视场焦距
+            speed: 0.8,              // 基础流速
+            warpFactor: 1,            // 变速倍率
+            warpTarget: 1,
+            mouseInfluence: 0.003,    // 鼠标影响系数
+            twinkleSpeed: 0.012,
+            starSizeMin: 0.4,
+            starSizeMax: 2.8,
+            nebulaAlpha: 0.04,        // 星云辉光强度
+        };
+
+        // ── 恒星类 ──
+        class Star {
+            constructor() {
+                this.reset(true);
+            }
+
+            reset(initial) {
+                // 随机分布在球状空间内
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                const r = Math.cbrt(Math.random()) * CONFIG.depth * 0.6;
+
+                this.x = r * Math.sin(phi) * Math.cos(theta);
+                this.y = r * Math.cos(phi);
+                this.z = initial
+                    ? Math.random() * CONFIG.depth
+                    : CONFIG.depth;
+
+                // 颜色：暖/冷/白 随机偏向
+                const colorRoll = Math.random();
+                if (colorRoll < 0.2) {
+                    // 暖星（橙红）
+                    this.rCol = 255;
+                    this.gCol = 140 + Math.random() * 60 | 0;
+                    this.bCol = 60 + Math.random() * 60 | 0;
+                } else if (colorRoll < 0.45) {
+                    // 冷星（蓝白）
+                    this.rCol = 160 + Math.random() * 60 | 0;
+                    this.gCol = 190 + Math.random() * 50 | 0;
+                    this.bCol = 255;
+                } else {
+                    // 白星
+                    const v = 200 + Math.random() * 55 | 0;
+                    this.rCol = v;
+                    this.gCol = v;
+                    this.bCol = v + (Math.random() * 30 | 0);
+                }
+
+                // 大小随机
+                this.baseSize = CONFIG.starSizeMin +
+                    Math.random() * (CONFIG.starSizeMax - CONFIG.starSizeMin);
+
+                // 闪烁相位
+                this.twinklePhase = Math.random() * Math.PI * 2;
+                this.twinkleSpeed = CONFIG.twinkleSpeed * (0.5 + Math.random());
+                this.twinkleAmp = 0.3 + Math.random() * 0.5;
+            }
+
+            update(speed, mx, my) {
+                // Z 轴推进
+                this.z -= speed;
+
+                // 鼠标影响：轻微 XY 偏移（产生环绕感）
+                this.x += mx * CONFIG.mouseInfluence * (this.z / CONFIG.depth);
+                this.y += my * CONFIG.mouseInfluence * (this.z / CONFIG.depth);
+
+                // 超出视野则重置
+                if (this.z <= 0 || this.z > CONFIG.depth ||
+                    Math.abs(this.x) > CONFIG.depth * 0.8 ||
+                    Math.abs(this.y) > CONFIG.depth * 0.8) {
+                    this.reset(false);
+                }
+
+                // 闪烁相位
+                this.twinklePhase += this.twinkleSpeed;
+            }
+
+            project() {
+                const scale = CONFIG.fov / (CONFIG.fov + this.z);
+                const px = this.x * scale + cx;
+                const py = this.y * scale + cy;
+                const size = this.baseSize * scale;
+
+                // 辉光强度：远处暗、近处亮
+                const glow = 1 - this.z / CONFIG.depth;
+
+                return { px, py, size, glow };
+            }
+
+            draw() {
+                const { px, py, size, glow } = this.project();
+
+                // 闪烁
+                const twinkle = 1 - this.twinkleAmp * 0.5 +
+                    this.twinkleAmp * 0.5 * Math.sin(this.twinklePhase);
+                const alpha = Math.max(0.05, glow * (0.6 + 0.4 * twinkle));
+
+                if (size < 0.3 || alpha < 0.02) return;
+
+                const r = this.rCol | 0;
+                const g = this.gCol | 0;
+                const b = this.bCol | 0;
+
+                // 核心亮点
+                const coreSize = Math.max(0.5, size);
+                ctx.beginPath();
+                ctx.arc(px, py, coreSize, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+                ctx.fill();
+
+                // 辉光光晕（近处大星）
+                if (size > 0.8 && alpha > 0.15) {
+                    const glowSize = size * (3 + glow * 4);
+                    const grad = ctx.createRadialGradient(px, py, 0, px, py, glowSize);
+                    grad.addColorStop(0, `rgba(${r},${g},${b},${alpha * 0.35})`);
+                    grad.addColorStop(0.4, `rgba(${r},${g},${b},${alpha * 0.1})`);
+                    grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+                    ctx.beginPath();
+                    ctx.arc(px, py, glowSize, 0, Math.PI * 2);
+                    ctx.fillStyle = grad;
+                    ctx.fill();
+                }
+
+                // 极近大星：十字光芒
+                if (size > 1.8 && alpha > 0.4) {
+                    ctx.save();
+                    ctx.globalAlpha = alpha * 0.2;
+                    ctx.strokeStyle = `rgba(${r},${g},${b},1)`;
+                    ctx.lineWidth = 0.5;
+                    const len = size * 5;
+                    ctx.beginPath();
+                    ctx.moveTo(px - len, py);
+                    ctx.lineTo(px + len, py);
+                    ctx.moveTo(px, py - len);
+                    ctx.lineTo(px, py + len);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+        }
+
+        // ── 星云粒子（背景雾状光晕）──
+        class NebulaParticle {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = (Math.random() - 0.5) * CONFIG.depth * 1.2;
+                this.y = (Math.random() - 0.5) * CONFIG.depth * 1.2;
+                this.z = Math.random() * CONFIG.depth;
+                this.size = 2 + Math.random() * 6;
+                const hue = 200 + Math.random() * 100; // 蓝紫区间
+                this.color = `hsla(${hue}, 60%, 50%, ${CONFIG.nebulaAlpha * (0.3 + Math.random() * 0.7)})`;
+            }
+            update(speed) {
+                this.z -= speed * 0.15;
+                if (this.z <= 0 || this.z > CONFIG.depth) this.reset();
+            }
+            draw() {
+                const scale = CONFIG.fov / (CONFIG.fov + this.z);
+                const px = this.x * scale + cx;
+                const py = this.y * scale + cy;
+                const s = this.size * scale;
+                if (s < 0.5) return;
+                ctx.beginPath();
+                ctx.arc(px, py, s, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+        }
+
+        // ── 状态 ──
+        let stars = [];
+        let nebula = [];
+        let mouseX = 0, mouseY = 0;
+        let targetMouseX = 0, targetMouseY = 0;
+        let scrollWarp = 1;
+
+        function init() {
+            stars = Array.from({ length: CONFIG.starCount }, () => new Star());
+            nebula = Array.from({ length: 80 }, () => new NebulaParticle());
+            resize();
+        }
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+        }
+        window.addEventListener('resize', resize);
+
+        // ── 鼠标 / 触摸 ──
+        function handleMove(px, py) {
+            targetMouseX = (px - cx) / cx;
+            targetMouseY = (py - cy) / cy;
+        }
+        canvas.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
+        canvas.addEventListener('touchmove', e => {
+            const t = e.touches[0];
+            handleMove(t.clientX, t.clientY);
+        }, { passive: true });
+        canvas.addEventListener('touchend', () => { targetMouseX = 0; targetMouseY = 0; });
+        canvas.addEventListener('mouseleave', () => { targetMouseX = 0; targetMouseY = 0; });
+
+        // ── 滚轮加速 ──
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            scrollWarp = Math.max(0.2, Math.min(6, scrollWarp + e.deltaY * -0.005));
+        }, { passive: false });
+
+        // ── 动画循环 ──
+        function animate() {
+            // 尺寸适配
+            if (W !== window.innerWidth || H !== window.innerHeight) resize();
+
+            // 鼠标平滑
+            mouseX += (targetMouseX - mouseX) * 0.08;
+            mouseY += (targetMouseY - mouseY) * 0.08;
+
+            // 滚轮平滑
+            CONFIG.warpFactor += (scrollWarp - CONFIG.warpFactor) * 0.1;
+            const speed = CONFIG.speed * CONFIG.warpFactor;
+
+            // 清屏：保留极淡拖尾
+            ctx.fillStyle = 'rgba(0,0,0,0.18)';
+            ctx.fillRect(0, 0, W, H);
+
+            // ── 绘制星云（底层）──
+            for (const p of nebula) {
+                p.update(speed);
+                p.draw();
+            }
+
+            // ── 排序：远处的先画 ──
+            stars.sort((a, b) => b.z - a.z);
+
+            // ── 绘制恒星 ──
+            for (const star of stars) {
+                star.update(speed, mouseX, mouseY);
+                star.draw();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // ── 提示文字自动淡出 ──
+        setTimeout(() => {
+            const hint = document.getElementById('hint');
+            if (hint) hint.style.opacity = '0';
+        }, 5000);
+
+        init();
+        animate();
+    </script>
+</body>
+</html>
