@@ -30,6 +30,10 @@
             color: rgba(255,255,255,0.85);
             pointer-events: none;
             user-select: none;
+            transition: opacity 2s ease;
+        }
+        .overlay.hidden {
+            opacity: 0;
         }
         .overlay h1 {
             font-size: clamp(2rem, 6vw, 4.5rem);
@@ -64,7 +68,7 @@
 
     <canvas id="starCanvas"></canvas>
 
-    <div class="overlay">
+    <div class="overlay" id="overlay">
         <h1>星辰</h1>
         <p>移动鼠标 · 漫游星海</p>
     </div>
@@ -334,9 +338,13 @@
 
         // ── 提示文字自动淡出 ──
         setTimeout(() => {
+            const overlay = document.getElementById('overlay');
+            if (overlay) overlay.classList.add('hidden');
+        }, 3500);
+        setTimeout(() => {
             const hint = document.getElementById('hint');
             if (hint) hint.style.opacity = '0';
-        }, 5000);
+        }, 6000);
 
         init();
         animate();
