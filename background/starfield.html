@@ -11,7 +11,6 @@
             overflow: hidden;
             background: #000;
         }
-
         body {
             display: flex;
             align-items: center;
@@ -20,10 +19,8 @@
 
         #starCanvas {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
             display: block;
             z-index: 0;
         }
@@ -51,7 +48,6 @@
             opacity: 0.6;
             font-weight: 300;
         }
-
         .hint {
             position: fixed;
             bottom: 32px;
@@ -72,14 +68,14 @@
 
     <div class="overlay" id="overlay">
         <h1>星辰</h1>
-        <p>移动鼠标 · 漫游星海</p>
+        <p>移动鼠标 · 旋转星空</p>
     </div>
 
-    <div class="hint" id="hint">✦ 拖动视角 · 滚轮变速</div>
+    <div class="hint" id="hint">✦ 移动鼠标旋转星空 · 滚轮变速</div>
 
     <script>
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  3D 星空背景 — Canvas 纯享版
+        //  3D 星空 —— 鼠标可旋转视角
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
         const canvas = document.getElementById('starCanvas');
@@ -96,11 +92,12 @@
             starSizeMax: 3.0,
             nebulaAlpha: 0.04,
             meteorCount: 3,
+            rotYMax: 0.35,   // 水平旋转最大角度 (rad)
+            rotXMax: 0.25,   // 垂直旋转最大角度 (rad)
         };
 
         // ── 辉光精灵 ──
         let glowSprite;
-
         function createGlowSprite() {
             const S = 128, h = S >> 1;
             const c = document.createElement('canvas');
@@ -118,19 +115,18 @@
 
         // ── 银河背景（预渲染）──
         let galaxyCanvas = null;
-
         function buildGalaxy() {
-            const size = 512;
+            const sz = 512;
             const c = document.createElement('canvas');
-            c.width = c.height = size;
+            c.width = c.height = sz;
             const g = c.getContext('2d');
-            const grad = g.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+            const grad = g.createRadialGradient(sz/2, sz/2, 0, sz/2, sz/2, sz/2);
             grad.addColorStop(0, 'rgba(70,110,240,0.02)');
             grad.addColorStop(0.25, 'rgba(50,70,200,0.012)');
             grad.addColorStop(0.6, 'rgba(30,40,100,0.005)');
             grad.addColorStop(1, 'rgba(0,0,0,0)');
             g.fillStyle = grad;
-            g.fillRect(0, 0, size, size);
+            g.fillRect(0, 0, sz, sz);
             return c;
         }
 
@@ -141,7 +137,6 @@
             ctx.transform(1, 0.15, -0.25, 0.55, cx * 0.3, 0);
             ctx.drawImage(galaxyCanvas, -s * 0.3, -s * 0.3, s, s);
             ctx.restore();
-
             ctx.save();
             ctx.globalAlpha = 0.5;
             ctx.transform(1, -0.1, 0.3, 0.5, -cx * 0.2, cy * 0.3);
@@ -150,22 +145,27 @@
         }
 
         // ═══════════════════════════════════════════════════
-        //  恒星
+        //  恒星（支持 3D 旋转）
         // ═══════════════════════════════════════════════════
         class Star {
             constructor() { this.reset(true); }
 
             reset(initial) {
-                // 均匀球状分布（确保全屏均匀）
                 const theta = Math.random() * Math.PI * 2;
                 const phi = Math.acos(2 * Math.random() - 1);
                 const r = Math.cbrt(Math.random()) * CFG.depth * 0.6;
 
-                this.x = r * Math.sin(phi) * Math.cos(theta);
-                this.y = r * Math.cos(phi);
-                this.z = initial
+                // 基座标（动画驱动）
+                this.bx = r * Math.sin(phi) * Math.cos(theta);
+                this.by = r * Math.cos(phi);
+                this.bz = initial
                     ? Math.random() * CFG.depth
                     : CFG.depth - Math.random() * 50;
+
+                // 渲染坐标（旋转后）
+                this.x = this.bx;
+                this.y = this.by;
+                this.z = this.bz;
 
                 this.pickColor();
                 this.baseSize = CFG.starSizeMin +
@@ -193,18 +193,35 @@
                 }
             }
 
+            // 更新基座标（Z 轴推进 + 鼠标偏移）
             update(speed, mx, my) {
-                this.z -= speed;
-                this.x += mx * CFG.mouseInfluence * (this.z / CFG.depth);
-                this.y += my * CFG.mouseInfluence * (this.z / CFG.depth);
+                this.bz -= speed;
+                this.bx += mx * CFG.mouseInfluence * (this.bz / CFG.depth);
+                this.by += my * CFG.mouseInfluence * (this.bz / CFG.depth);
 
-                if (this.z <= 0 || this.z > CFG.depth ||
-                    Math.abs(this.x) > CFG.depth * 0.8 ||
-                    Math.abs(this.y) > CFG.depth * 0.8) {
+                if (this.bz <= 0 || this.bz > CFG.depth ||
+                    Math.abs(this.bx) > CFG.depth * 0.8 ||
+                    Math.abs(this.by) > CFG.depth * 0.8) {
                     this.reset(false);
                     return;
                 }
                 this.twinklePhase += this.twinkleSpeed;
+            }
+
+            // 绕 Y 轴（水平）和 X 轴（垂直）旋转
+            applyRotation(rotY, rotX) {
+                const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+                const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+
+                // 绕 Y 轴旋转
+                const rx = this.bx * cosY + this.bz * sinY;
+                const ry = this.by;
+                const rz = -this.bx * sinY + this.bz * cosY;
+
+                // 绕 X 轴旋转
+                this.x = rx;
+                this.y = ry * cosX - rz * sinX;
+                this.z = ry * sinX + rz * cosX;
             }
 
             draw() {
@@ -214,7 +231,6 @@
                 const size = this.baseSize * scale;
                 const depthGlow = 1 - this.z / CFG.depth;
 
-                // 闪烁
                 const twinkle = 1 - this.twinkleAmp * 0.5 +
                     this.twinkleAmp * 0.5 * Math.sin(this.twinklePhase);
                 const alpha = Math.max(0.05, depthGlow * (0.6 + 0.4 * twinkle));
@@ -223,14 +239,13 @@
 
                 const r = this.r, g = this.g, b = this.b;
 
-                // 辉光（预渲染精灵）
+                // 辉光
                 if (size > 0.6 && alpha > 0.1) {
                     const gs = size * (3 + depthGlow * 5);
                     ctx.globalAlpha = alpha * 0.35;
                     ctx.drawImage(glowSprite, px - gs, py - gs, gs * 2, gs * 2);
                     ctx.globalAlpha = 1;
 
-                    // 额外光晕（近处大星）
                     if (size > 1.5) {
                         const gs2 = gs * 1.8;
                         ctx.globalAlpha = alpha * 0.12;
@@ -239,13 +254,13 @@
                     }
                 }
 
-                // 核心亮点
+                // 核心
                 ctx.beginPath();
                 ctx.arc(px, py, Math.max(0.5, size), 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(${r},${g},${b},${Math.min(1, alpha * 1.2)})`;
                 ctx.fill();
 
-                // 十字光芒
+                // 十字
                 if (size > 2.0 && alpha > 0.4) {
                     ctx.save();
                     ctx.globalAlpha = alpha * 0.2;
@@ -268,21 +283,28 @@
         // ═══════════════════════════════════════════════════
         class NebulaParticle {
             constructor() { this.reset(); }
-
             reset() {
-                this.x = (Math.random() - 0.5) * CFG.depth * 1.2;
-                this.y = (Math.random() - 0.5) * CFG.depth * 1.2;
-                this.z = Math.random() * CFG.depth;
+                this.bx = (Math.random() - 0.5) * CFG.depth * 1.2;
+                this.by = (Math.random() - 0.5) * CFG.depth * 1.2;
+                this.bz = Math.random() * CFG.depth;
                 this.size = 2 + Math.random() * 6;
                 this.hue = 200 + Math.random() * 120;
                 this._alpha = CFG.nebulaAlpha * (0.3 + Math.random() * 0.7);
             }
+            update(speed, rotY, rotX) {
+                this.bz -= speed * 0.15;
+                if (this.bz <= 0 || this.bz > CFG.depth) this.reset();
 
-            update(speed) {
-                this.z -= speed * 0.15;
-                if (this.z <= 0 || this.z > CFG.depth) this.reset();
+                // 同样旋转
+                const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+                const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+                const rx = this.bx * cosY + this.bz * sinY;
+                const ry = this.by;
+                const rz = -this.bx * sinY + this.bz * cosX;
+                this.x = rx;
+                this.y = ry * cosX - rz * sinX;
+                this.z = ry * sinX + rz * cosX;
             }
-
             draw() {
                 const scale = CFG.fov / (CFG.fov + this.z);
                 const px = this.x * scale + cx;
@@ -301,12 +323,7 @@
         // ═══════════════════════════════════════════════════
         class Meteor {
             constructor() { this.cooldown = 0; this.active = false; }
-
-            resetTimer() {
-                this.active = false;
-                this.cooldown = 200 + Math.random() * 600 | 0;
-            }
-
+            resetTimer() { this.active = false; this.cooldown = 200 + Math.random() * 600 | 0; }
             launch() {
                 this.active = true;
                 const angle = -Math.PI * (0.15 + Math.random() * 0.3);
@@ -319,34 +336,25 @@
                 this.maxLife = this.life;
                 this.trailLen = 25 + Math.random() * 30;
             }
-
             update() {
-                if (!this.active) {
-                    if (--this.cooldown <= 0) this.launch();
-                    return;
-                }
-                this.x += this.vx;
-                this.y += this.vy;
+                if (!this.active) { if (--this.cooldown <= 0) this.launch(); return; }
+                this.x += this.vx; this.y += this.vy;
                 if (--this.life <= 0) this.resetTimer();
             }
-
             draw() {
                 if (!this.active) return;
                 const t = 1 - this.life / this.maxLife;
                 const alpha = Math.sin(t * Math.PI) * 0.85;
                 const tx = this.x - this.vx * this.trailLen * (0.3 + t * 0.3);
                 const ty = this.y - this.vy * this.trailLen * (0.3 + t * 0.3);
-
                 const grad = ctx.createLinearGradient(tx, ty, this.x, this.y);
                 grad.addColorStop(0, 'rgba(180,210,255,0)');
                 grad.addColorStop(1, `rgba(220,235,255,${alpha})`);
                 ctx.beginPath();
-                ctx.moveTo(tx, ty);
-                ctx.lineTo(this.x, this.y);
+                ctx.moveTo(tx, ty); ctx.lineTo(this.x, this.y);
                 ctx.strokeStyle = grad;
                 ctx.lineWidth = 1.2 + t * 0.8;
                 ctx.stroke();
-
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, 2.5, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(255,255,255,${alpha})`;
@@ -378,12 +386,10 @@
         function resize() {
             W = canvas.width = window.innerWidth;
             H = canvas.height = window.innerHeight;
-            cx = W / 2;
-            cy = H / 2;
+            cx = W / 2; cy = H / 2;
         }
         window.addEventListener('resize', resize);
 
-        // ── 鼠标 / 触摸 ──
         function handleMove(px, py) {
             targetMouseX = (px - cx) / cx;
             targetMouseY = (py - cy) / cy;
@@ -395,8 +401,6 @@
         }, { passive: true });
         canvas.addEventListener('touchend', () => { targetMouseX = 0; targetMouseY = 0; });
         canvas.addEventListener('mouseleave', () => { targetMouseX = 0; targetMouseY = 0; });
-
-        // ── 滚轮 ──
         canvas.addEventListener('wheel', e => {
             e.preventDefault();
             rawWarp = Math.max(0.2, Math.min(6, rawWarp + e.deltaY * -0.005));
@@ -413,18 +417,23 @@
             smoothWarp += (rawWarp - smoothWarp) * 0.1;
             const speed = CFG.speed * smoothWarp;
 
-            // 清屏（保留拖尾）
+            // 计算旋转角度
+            const rotY = mouseX * CFG.rotYMax;
+            const rotX = mouseY * CFG.rotXMax;
+
+            // 清屏
             ctx.fillStyle = 'rgba(0,0,0,0.18)';
             ctx.fillRect(0, 0, W, H);
 
             // ① 银河
             drawGalaxy();
 
-            // ② 星云
-            for (const p of nebulaParticles) { p.update(speed); p.draw(); }
+            // ② 星云（随视角旋转）
+            for (const p of nebulaParticles) { p.update(speed, rotY, rotX); p.draw(); }
 
-            // ③ 恒星
+            // ③ 恒星：更新 → 旋转 → 排序 → 绘制
             for (const star of stars) { star.update(speed, mouseX, mouseY); }
+            for (const star of stars) { star.applyRotation(rotY, rotX); }
             stars.sort((a, b) => b.z - a.z);
             for (const star of stars) { star.draw(); }
 
@@ -434,7 +443,6 @@
             rAF = requestAnimationFrame(animate);
         }
 
-        // ── UI 淡出 ──
         setTimeout(() => {
             document.getElementById('overlay')?.classList.add('hidden');
         }, 3500);
