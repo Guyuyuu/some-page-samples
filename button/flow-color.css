@@ -115,59 +115,82 @@ body {
 }
 
 /* ============================================================
-   彩色流光粒子
+   流光光尘粒子（自然上浮，如萤火般飘逸）
    ============================================================ */
 .flow-particles {
   position: absolute;
-  inset: -20px;
+  inset: -60px;
   pointer-events: none;
   z-index: 2;
   overflow: visible;
 }
 
-/* 粒子点阵 */
+/* 粒子集 #1 — 小光尘，缓慢斜向上浮 */
 .flow-particles::before {
   content: '';
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 4px;
-  height: 4px;
+  inset: 0;
+  width: 2px;
+  height: 2px;
   border-radius: 50%;
-  background: #ff0080;
+  background: rgba(255, 200, 255, 0.5);
   box-shadow:
-    /* 环绕粒子 — 彩色 */
-    60px -40px  #ff0080,
-    80px -10px  #ff8c00,
-    50px  30px  #40e0d0,
-    0px   50px  #0088ff,
-   -50px  30px  #8a2be2,
-   -80px -10px  #ff0080,
-   -60px -40px  #ff8c00,
-   -30px -55px  #40e0d0,
-    30px -55px  #ff0080,
-    70px -25px  #8a2be2,
-    0px  -60px  #ff8c00,
-   -70px -25px  #0088ff,
-    40px  45px  #ff8c00,
-   -40px  45px  #40e0d0,
-    90px   0px  #ff0080,
-   -90px   0px  #8a2be2,
-    0px   60px  #ff8c00,
-    0px  -70px  #0088ff,
-    95px -20px  #40e0d0,
-   -95px -20px  #ff0080,
-    95px  20px  #8a2be2,
-   -95px  20px  #ff8c00;
-  animation: particle-float 4s ease-in-out infinite;
+    /* 左侧光尘，偏粉紫色调 */
+     8%  20% 0 0 rgba(255, 128, 200, 0.40),
+    15%  45% 0 0 rgba(200, 150, 255, 0.35),
+    22%  10% 0 0 rgba(255, 100, 180, 0.30),
+    30%  55% 0 0 rgba(180, 120, 255, 0.40),
+    38%  30% 0 0 rgba(255, 160, 220, 0.25),
+    45%  65% 0 0 rgba(160, 200, 255, 0.35),
+    /* 右侧光尘，偏青蓝调 */
+    55%  15% 0 0 rgba(100, 220, 255, 0.30),
+    62%  50% 0 0 rgba(120, 200, 240, 0.40),
+    70%  25% 0 0 rgba(80, 180, 255, 0.25),
+    78%  60% 0 0 rgba(150, 220, 255, 0.35),
+    85%  35% 0 0 rgba(100, 200, 230, 0.30),
+    92%  70% 0 0 rgba(180, 180, 255, 0.25);
+  animation: dust-drift-up 5s ease-out infinite;
 }
 
-@keyframes particle-float {
-  0%   { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
-  25%  { opacity: 1; }
-  50%  { transform: translate(-50%, -50%) scale(1.3); opacity: 0.8; }
-  75%  { opacity: 1; }
-  100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+@keyframes dust-drift-up {
+  0%   { transform: translateY(0)  translateX(0)  scale(0.8); opacity: 0; }
+  15%  { opacity: 0.7; }
+  50%  { opacity: 0.5; }
+  85%  { opacity: 0.2; }
+  100% { transform: translateY(-80px) translateX(15px) scale(0.2); opacity: 0; }
+}
+
+/* 粒子集 #2 — 稍大光尘，更慢上浮，延时启动 */
+.flow-particles::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(200, 255, 255, 0.4);
+  box-shadow:
+     5%  75% 0 0 rgba(100, 200, 255, 0.30),
+    12%  40% 0 0 rgba(255, 180, 200, 0.25),
+    20%  80% 0 0 rgba(200, 100, 255, 0.30),
+    28%  15% 0 0 rgba(255, 200, 160, 0.25),
+    35%  60% 0 0 rgba(160, 100, 255, 0.35),
+    42%  85% 0 0 rgba(100, 220, 200, 0.25),
+    50%  45% 0 0 rgba(255, 150, 200, 0.30),
+    58%  70% 0 0 rgba(120, 200, 255, 0.25),
+    65%  20% 0 0 rgba(200, 160, 255, 0.30),
+    72%  50% 0 0 rgba(80, 200, 220, 0.25),
+    80%  80% 0 0 rgba(255, 120, 180, 0.30),
+    88%  30% 0 0 rgba(180, 220, 255, 0.25);
+  animation: dust-drift-slow 7s ease-out infinite 2s;
+}
+
+@keyframes dust-drift-slow {
+  0%   { transform: translateY(0)  translateX(0)  scale(1);   opacity: 0; }
+  12%  { opacity: 0.5; }
+  50%  { opacity: 0.3; }
+  88%  { opacity: 0.1; }
+  100% { transform: translateY(-100px) translateX(-12px) scale(0.1); opacity: 0; }
 }
 
 /* ============================================================
@@ -380,7 +403,11 @@ body {
 }
 
 .flow-btn:hover ~ .flow-particles::before {
-  animation-duration: 2.5s;
+  animation-duration: 3s;
+}
+.flow-btn:hover ~ .flow-particles::after {
+  animation-duration: 4.5s;
+  animation-delay: 0.5s;
 }
 
 /* ============================================================
@@ -437,7 +464,8 @@ body {
   .wrapper::after,
   .aura-ring,
   .flow-btn-inner,
-  .flow-particles::before {
+  .flow-particles::before,
+  .flow-particles::after {
     transition: none !important;
     animation: none !important;
   }
@@ -474,7 +502,8 @@ body {
   .aura-ring {
     opacity: 0 !important;
   }
-  .flow-particles::before {
+  .flow-particles::before,
+  .flow-particles::after {
     opacity: 0 !important;
   }
 }
