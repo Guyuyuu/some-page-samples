@@ -1,0 +1,363 @@
+/* ============================================
+   朴素按钮 · Plain Button
+   去掉装饰，回归按钮的本质
+   ============================================ */
+
+/* ---------- Reset & base ---------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans SC",
+    "Helvetica Neue", Arial, sans-serif;
+  background: oklch(96% 0.005 90);
+  color: oklch(25% 0.015 90);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Demo page layout ---------- */
+.demo {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem 6rem;
+}
+
+.demo-title {
+  font-size: 1.75rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.25rem;
+}
+
+.demo-desc {
+  font-size: 0.925rem;
+  color: oklch(50% 0.01 90);
+  margin-bottom: 3rem;
+}
+
+.demo-group {
+  margin-bottom: 2.5rem;
+}
+
+.group-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: oklch(60% 0.01 90);
+  margin-bottom: 0.75rem;
+}
+
+.demo-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.demo-row--center {
+  justify-content: center;
+}
+
+
+/* ============================================
+   Button · 核心按钮
+   ============================================ */
+
+.plain-btn {
+  /* ---- tokens ---- */
+  --btn-hue: 245;
+  --btn-chroma: 0.06;
+  --btn-light: 48%;
+  --btn-bg: oklch(var(--btn-light) var(--btn-chroma) var(--btn-hue));
+  --btn-text: oklch(96% 0.01 85);
+  --btn-border: transparent;
+
+  /* ---- sizing ---- */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  padding: 0.55em 1.3em;
+  font-size: 0.925rem;
+  font-family: inherit;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  user-select: none;
+
+  /* ---- visual ---- */
+  color: var(--btn-text);
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 8px;
+  cursor: pointer;
+
+  /* ---- depth (rest) ---- */
+  box-shadow:
+    0 1px 2px oklch(0% 0 0 / 0.06),
+    0 1px 4px oklch(0% 0 0 / 0.04);
+  transform: translateY(0);
+
+  /* ---- transition ---- */
+  transition:
+    background 180ms ease,
+    box-shadow 180ms ease,
+    transform 120ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+
+  /* ---- accessible outline ---- */
+  outline: none;
+}
+
+.plain-btn:where(:not(:disabled)):hover {
+  box-shadow:
+    0 4px 8px oklch(0% 0 0 / 0.08),
+    0 2px 4px oklch(0% 0 0 / 0.06);
+  transform: translateY(-1px);
+}
+
+.plain-btn:where(:not(:disabled)):active {
+  box-shadow:
+    0 0 0 oklch(0% 0 0 / 0.06),
+    0 1px 2px oklch(0% 0 0 / 0.04);
+  transform: translateY(0);
+}
+
+/* ---- focus-visible ---- */
+.plain-btn:focus-visible {
+  box-shadow:
+    0 0 0 2px oklch(96% 0.005 90),
+    0 0 0 4px oklch(50% 0.08 var(--btn-hue));
+}
+
+/* ---- disabled ---- */
+.plain-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+
+/* ============================================
+   Variants — colors
+   ============================================ */
+
+/* Primary — muted indigo */
+.plain-btn--primary {
+  --btn-hue: 245;
+  --btn-chroma: 0.08;
+  --btn-light: 48%;
+}
+
+/* Secondary — warm gray */
+.plain-btn--secondary {
+  --btn-hue: 70;
+  --btn-chroma: 0.03;
+  --btn-light: 48%;
+}
+
+/* Danger — muted red */
+.plain-btn--danger {
+  --btn-hue: 15;
+  --btn-chroma: 0.1;
+  --btn-light: 48%;
+}
+
+
+/* ============================================
+   Variants — solid
+   ============================================ */
+
+.plain-btn:where(.plain-btn--primary) {
+  --btn-bg: oklch(var(--btn-light) var(--btn-chroma) var(--btn-hue));
+  --btn-text: oklch(96% 0.01 85);
+  --btn-border: transparent;
+}
+
+.plain-btn--primary:where(:not(:disabled)):hover {
+  --btn-light: 44%;
+}
+
+.plain-btn--primary:where(:not(:disabled)):active {
+  --btn-light: 42%;
+}
+
+.plain-btn--primary:where(:not(:disabled)):hover {
+  --btn-bg: oklch(44% var(--btn-chroma) var(--btn-hue));
+}
+
+.plain-btn--primary:where(:not(:disabled)):active {
+  --btn-bg: oklch(42% var(--btn-chroma) var(--btn-hue));
+}
+
+
+/* Secondary solid */
+.plain-btn--secondary {
+  --btn-bg: oklch(48% 0.03 70);
+  --btn-text: oklch(96% 0.01 85);
+}
+
+.plain-btn--secondary:where(:not(:disabled)):hover {
+  --btn-bg: oklch(44% 0.03 70);
+}
+
+.plain-btn--secondary:where(:not(:disabled)):active {
+  --btn-bg: oklch(42% 0.03 70);
+}
+
+
+/* Danger solid */
+.plain-btn--danger {
+  --btn-bg: oklch(48% 0.1 25);
+  --btn-text: oklch(96% 0.01 85);
+}
+
+.plain-btn--danger:where(:not(:disabled)):hover {
+  --btn-bg: oklch(44% 0.1 25);
+}
+
+.plain-btn--danger:where(:not(:disabled)):active {
+  --btn-bg: oklch(42% 0.1 25);
+}
+
+
+/* ============================================
+   Variants — outline
+   ============================================ */
+
+.plain-btn--outline {
+  --btn-bg: transparent;
+  --btn-border: oklch(60% 0.04 var(--btn-hue));
+  --btn-text: oklch(35% 0.04 var(--btn-hue));
+  box-shadow: none;
+}
+
+.plain-btn--outline:where(:not(:disabled)):hover {
+  --btn-bg: oklch(50% 0.04 var(--btn-hue) / 0.08);
+  box-shadow: none;
+  transform: translateY(-1px);
+}
+
+.plain-btn--outline:where(:not(:disabled)):active {
+  --btn-bg: oklch(50% 0.04 var(--btn-hue) / 0.14);
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.plain-btn--outline:disabled {
+  --btn-border: oklch(75% 0.02 90);
+  --btn-text: oklch(70% 0.02 90);
+}
+
+.plain-btn--outline:focus-visible {
+  box-shadow:
+    0 0 0 2px oklch(96% 0.005 90),
+    0 0 0 4px oklch(50% 0.08 var(--btn-hue));
+}
+
+
+/* ============================================
+   Variants — ghost
+   ============================================ */
+
+.plain-btn--ghost {
+  --btn-bg: transparent;
+  --btn-border: transparent;
+  --btn-text: oklch(35% 0.04 var(--btn-hue));
+  box-shadow: none;
+}
+
+.plain-btn--ghost:where(:not(:disabled)):hover {
+  --btn-bg: oklch(50% 0.03 var(--btn-hue) / 0.08);
+  box-shadow: none;
+  transform: translateY(-1px);
+}
+
+.plain-btn--ghost:where(:not(:disabled)):active {
+  --btn-bg: oklch(50% 0.03 var(--btn-hue) / 0.14);
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.plain-btn--ghost:disabled {
+  --btn-text: oklch(75% 0.02 90);
+}
+
+.plain-btn--ghost:focus-visible {
+  box-shadow:
+    0 0 0 2px oklch(96% 0.005 90),
+    0 0 0 4px oklch(50% 0.08 var(--btn-hue));
+}
+
+
+/* ============================================
+   Variants — sizes
+   ============================================ */
+
+.plain-btn--sm {
+  font-size: 0.8rem;
+  padding: 0.35em 0.95em;
+  border-radius: 6px;
+}
+
+.plain-btn--lg {
+  font-size: 1.1rem;
+  padding: 0.7em 1.8em;
+  border-radius: 10px;
+}
+
+
+/* ============================================
+   A tiny dark-mode courtesy
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: oklch(20% 0.008 90);
+    color: oklch(88% 0.01 90);
+  }
+  .demo-desc {
+    color: oklch(65% 0.01 90);
+  }
+  .group-label {
+    color: oklch(55% 0.01 90);
+  }
+
+  .plain-btn--outline {
+    --btn-text: oklch(75% 0.04 var(--btn-hue));
+    --btn-border: oklch(65% 0.04 var(--btn-hue));
+  }
+
+  .plain-btn--outline:where(:not(:disabled)):hover {
+    --btn-bg: oklch(80% 0.04 var(--btn-hue) / 0.1);
+  }
+
+  .plain-btn--outline:where(:not(:disabled)):active {
+    --btn-bg: oklch(80% 0.04 var(--btn-hue) / 0.18);
+  }
+
+  .plain-btn--ghost {
+    --btn-text: oklch(75% 0.04 var(--btn-hue));
+  }
+
+  .plain-btn--ghost:where(:not(:disabled)):hover {
+    --btn-bg: oklch(80% 0.03 var(--btn-hue) / 0.1);
+  }
+
+  .plain-btn--ghost:where(:not(:disabled)):active {
+    --btn-bg: oklch(80% 0.03 var(--btn-hue) / 0.18);
+  }
+
+  .plain-btn:focus-visible {
+    box-shadow:
+      0 0 0 2px oklch(20% 0.008 90),
+      0 0 0 4px oklch(60% 0.08 var(--btn-hue));
+  }
+}
